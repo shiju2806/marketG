@@ -9,6 +9,7 @@ The first commercial application is **AI Visibility**: measuring whether AI can 
 - [Product Requirements Document](docs/PRD.md) — vision, strategy, pillars, personas, MVP scope.
 - [System Architecture Document](docs/SAD.md) — layers, storage, pipeline, semantic twin, governance.
 - [Semantic Business Twin Specification](docs/SBTS.md) — data model, entities, relationships, claims, evidence, confidence.
+- [Knowledge Intelligence Pipeline Specification](docs/KIPS.md) — acquisition, document intelligence, semantic chunking, multi-agent extraction, governance, learning loop.
 
 ## Status
 
