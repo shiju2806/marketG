@@ -17,6 +17,8 @@ The first commercial application is **AI Visibility**: measuring whether AI can 
 - [API Specification](docs/API_SPEC.md) — Twin, Reasoning, Recommendation, and Ingestion HTTP interfaces.
 - [Database Design](docs/DATABASE_DESIGN.md) — polyglot schemas: PostgreSQL, Neo4j, vector, search, object storage.
 - [MVP Engineering Roadmap](docs/MVP_ROADMAP.md) — sprint-by-sprint implementation plan.
+- [Glossary & Concept Map](docs/GLOSSARY.md) — shared vocabulary; **start here** to understand the terms.
+- [Technology Stack (MVP vs. Target)](docs/TECH_STACK.md) — the concrete stack we build first and how it scales.
 
 ## Status
 
