@@ -14,14 +14,22 @@ def raw_key(account_id: str, source_id: str, content_hash: str) -> str:
     return f"{account_id}/{source_id}/{content_hash}.html"
 
 
+def _auth_headers(extra: dict | None = None) -> dict:
+    # Supabase's gateway wants both apikey and Authorization; without apikey some
+    # endpoints return 400 instead of the correct status (e.g. 409 on duplicate).
+    headers = {
+        "Authorization": f"Bearer {settings.supabase_service_role_key}",
+        "apikey": settings.supabase_service_role_key,
+    }
+    if extra:
+        headers.update(extra)
+    return headers
+
+
 async def upload_raw(key: str, html: str) -> str:
     """Upload rendered HTML to the raw-documents bucket. Idempotent (upsert)."""
     url = f"{settings.supabase_url}/storage/v1/object/{settings.storage_bucket}/{key}"
-    headers = {
-        "Authorization": f"Bearer {settings.supabase_service_role_key}",
-        "Content-Type": "text/html",
-        "x-upsert": "true",
-    }
+    headers = _auth_headers({"Content-Type": "text/html", "x-upsert": "true"})
     async with httpx.AsyncClient() as client:
         resp = await client.post(url, content=html.encode("utf-8"), headers=headers, timeout=30.0)
         resp.raise_for_status()
@@ -31,10 +39,7 @@ async def upload_raw(key: str, html: str) -> str:
 async def ensure_bucket() -> None:
     """Create the raw-documents bucket if it doesn't exist (idempotent, dev helper)."""
     url = f"{settings.supabase_url}/storage/v1/bucket"
-    headers = {
-        "Authorization": f"Bearer {settings.supabase_service_role_key}",
-        "Content-Type": "application/json",
-    }
+    headers = _auth_headers({"Content-Type": "application/json"})
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             url,
@@ -42,6 +47,11 @@ async def ensure_bucket() -> None:
             headers=headers,
             timeout=15.0,
         )
-        # 200 created, 409 already exists — both fine.
-        if resp.status_code not in (200, 409):
-            resp.raise_for_status()
+        # 200 created; 409 already exists; some gateways report a duplicate as 400.
+        if resp.status_code in (200, 409):
+            return
+        if resp.status_code == 400 and (
+            "exist" in resp.text.lower() or "duplicate" in resp.text.lower()
+        ):
+            return
+        resp.raise_for_status()

@@ -7,7 +7,6 @@ each other. This is the MVP stand-in for Kafka/Temporal (see DEFERRALS I-04/I-05
 """
 from __future__ import annotations
 
-import json
 from uuid import UUID
 
 import asyncpg
@@ -32,7 +31,7 @@ async def enqueue(
         organization_id,
         source_id,
         job_type,
-        json.dumps(payload or {}),
+        payload or {},
     )
     return row["job_id"]
 
@@ -66,7 +65,7 @@ async def complete(pool: asyncpg.Pool, job_id: UUID, metrics: dict | None = None
     await pool.execute(
         "update job set status='done', stage='done', metrics=$2::jsonb, locked_by=null where job_id=$1",
         job_id,
-        json.dumps(metrics or {}),
+        metrics or {},
     )
 
 

@@ -6,11 +6,21 @@ JWT and is governed by the RLS policies in migration 0003.
 """
 from __future__ import annotations
 
+import json
+
 import asyncpg
 
 from app.config import settings
 
 _pool: asyncpg.Pool | None = None
+
+
+async def _init_connection(conn: asyncpg.Connection) -> None:
+    # Round-trip json/jsonb as Python objects instead of raw strings.
+    for typ in ("json", "jsonb"):
+        await conn.set_type_codec(
+            typ, encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+        )
 
 
 async def get_pool() -> asyncpg.Pool:
@@ -21,6 +31,7 @@ async def get_pool() -> asyncpg.Pool:
             min_size=1,
             max_size=10,
             command_timeout=60,
+            init=_init_connection,
         )
     return _pool
 

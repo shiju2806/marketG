@@ -6,7 +6,6 @@ Stateless and idempotent — run as many as you like (ADR-007).
 from __future__ import annotations
 
 import asyncio
-import json
 
 import asyncpg
 
@@ -74,7 +73,7 @@ async def handle_crawl(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
             page.http_status,
             page.js_required,
             page.has_schema_org,
-            json.dumps(ai_policy),
+            ai_policy,
         )
         ingested += 1
 
