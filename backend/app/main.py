@@ -8,8 +8,10 @@ import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import crawl, organizations, probe, recommendations, sources, twin, visibility
+from app.config import settings
 from app.db import close_pool, get_pool
 
 
@@ -25,6 +27,13 @@ app = FastAPI(
     version="0.1.0",
     summary="Generative Engine Optimization platform — ingestion (Sprint 1)",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(organizations.router)

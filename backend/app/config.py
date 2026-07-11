@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     worker_id: str = "worker-1"
     worker_poll_seconds: float = 2.0
 
+    # CORS — allow the local dashboard (Vite dev server) to call the API.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
     # LLM / embeddings (TECH_STACK seams). Default to the keyless mock so the
     # pipeline runs locally without provider credentials or internet.
     llm_provider: str = "mock"            # mock | anthropic | openai
