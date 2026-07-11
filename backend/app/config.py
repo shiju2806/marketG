@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     openai_embed_model: str = "text-embedding-3-small"
+    openai_llm_model: str = "gpt-4o-mini"
     anthropic_model: str = "claude-sonnet-5"
 
     # Chunking / extraction limits (D-05 cost control: cap work per unit).

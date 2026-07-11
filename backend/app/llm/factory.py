@@ -23,4 +23,8 @@ def get_llm_provider() -> LLMProvider:
         from app.llm.anthropic import AnthropicLLMProvider
 
         return AnthropicLLMProvider()
+    if settings.llm_provider == "openai":
+        from app.llm.openai import OpenAILLMProvider
+
+        return OpenAILLMProvider()
     return MockLLMProvider()

@@ -6,12 +6,11 @@ governance (Sprint 3) decides what enters the twin — "LLM proposes, twin decid
 """
 from __future__ import annotations
 
-import json
-
 import httpx
 
 from app.config import settings
-from app.llm.base import ExtractedEntity, TokenUsage
+from app.llm.base import TokenUsage
+from app.llm.util import parse_entities_json
 from app.verticals.base import VerticalPack
 
 # Claude Sonnet pricing (approx, per 1M tokens).
@@ -59,7 +58,7 @@ class AnthropicLLMProvider:
             data = resp.json()
 
         raw = "".join(block.get("text", "") for block in data.get("content", []))
-        entities = _parse(raw, pack)
+        entities = parse_entities_json(raw)
         u = data.get("usage", {})
         cost = round(
             u.get("input_tokens", 0) / 1_000_000 * _IN_PER_1M
@@ -70,25 +69,3 @@ class AnthropicLLMProvider:
             tokens=u.get("input_tokens", 0) + u.get("output_tokens", 0), cost_usd=cost
         )
         return entities, usage
-
-
-def _parse(raw: str, pack: VerticalPack) -> list[ExtractedEntity]:
-    start, end = raw.find("["), raw.rfind("]")
-    if start == -1 or end == -1:
-        return []
-    try:
-        items = json.loads(raw[start : end + 1])
-    except json.JSONDecodeError:
-        return []
-    out: list[ExtractedEntity] = []
-    for it in items:
-        if not isinstance(it, dict) or "name" not in it:
-            continue
-        out.append(
-            ExtractedEntity(
-                name=str(it["name"]).strip(),
-                entity_type=str(it.get("entity_type", "Entity")),
-                confidence=float(it.get("confidence", 0.6)),
-            )
-        )
-    return out
