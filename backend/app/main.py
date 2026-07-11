@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import crawl, organizations, sources, twin, visibility
+from app.api import crawl, organizations, probe, sources, twin, visibility
 from app.db import close_pool, get_pool
 
 
@@ -32,6 +32,7 @@ app.include_router(sources.router)
 app.include_router(crawl.router)
 app.include_router(twin.router)
 app.include_router(visibility.router)
+app.include_router(probe.router)
 
 
 @app.get("/health", tags=["meta"])

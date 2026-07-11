@@ -32,9 +32,15 @@ class Settings(BaseSettings):
     embed_dim: int = 1536                 # must match chunk.embedding vector(N)
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+    perplexity_api_key: str = ""
     openai_embed_model: str = "text-embedding-3-small"
     openai_llm_model: str = "gpt-4o-mini"
     anthropic_model: str = "claude-sonnet-5"
+    perplexity_model: str = "sonar"
+
+    # External AI probe (Sprint 4b, HRRE §13).
+    probe_targets: str = "chatgpt,claude,perplexity"  # requested; only keyed ones run
+    probe_samples: int = 1
 
     # Chunking / extraction limits (D-05 cost control: cap work per unit).
     chunk_max_chars: int = 2400           # split a section beyond this

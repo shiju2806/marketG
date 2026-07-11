@@ -110,7 +110,14 @@ async def handle_extract(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
     return await process_document(pool, document)
 
 
-HANDLERS = {"crawl": handle_crawl, "extract": handle_extract}
+async def handle_probe(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
+    """Probe external assistants for the org's buyer questions (HRRE §13)."""
+    from app.probe.engine import run_probe
+
+    return await run_probe(pool, job["account_id"], job["organization_id"])
+
+
+HANDLERS = {"crawl": handle_crawl, "extract": handle_extract, "probe": handle_probe}
 
 
 async def run() -> None:
