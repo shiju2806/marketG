@@ -1,0 +1,619 @@
+<title>AI Visibility Report — GM vs Rivian</title>
+<style>
+  :root {
+    --bg: #F5F7FA;
+    --surface: #FFFFFF;
+    --surface-2: #EEF1F6;
+    --ink: #141821;
+    --ink-soft: #4A5262;
+    --ink-faint: #8A93A6;
+    --line: #DCE1EA;
+    --accent: #1E63E9;
+    --accent-soft: #E4ECFD;
+    --good: #1F9D57;
+    --warn: #B4790F;
+    --crit: #D23C3C;
+    --good-soft: #E4F4EB;
+    --warn-soft: #F7EDD8;
+    --crit-soft: #FAE6E6;
+    --shadow: 0 1px 2px rgba(20,24,33,.04), 0 8px 24px rgba(20,24,33,.06);
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0C0F14;
+      --surface: #141922;
+      --surface-2: #1B222D;
+      --ink: #EAEEF6;
+      --ink-soft: #A6B0C2;
+      --ink-faint: #6B7688;
+      --line: #232B38;
+      --accent: #5B8CFF;
+      --accent-soft: #16223B;
+      --good: #34C77B;
+      --warn: #E5A93A;
+      --crit: #F0605F;
+      --good-soft: #12261C;
+      --warn-soft: #2A2113;
+      --crit-soft: #2C1618;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F5F7FA; --surface: #FFFFFF; --surface-2: #EEF1F6; --ink: #141821;
+    --ink-soft: #4A5262; --ink-faint: #8A93A6; --line: #DCE1EA; --accent: #1E63E9;
+    --accent-soft: #E4ECFD; --good: #1F9D57; --warn: #B4790F; --crit: #D23C3C;
+    --good-soft: #E4F4EB; --warn-soft: #F7EDD8; --crit-soft: #FAE6E6;
+    --shadow: 0 1px 2px rgba(20,24,33,.04), 0 8px 24px rgba(20,24,33,.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0C0F14; --surface: #141922; --surface-2: #1B222D; --ink: #EAEEF6;
+    --ink-soft: #A6B0C2; --ink-faint: #6B7688; --line: #232B38; --accent: #5B8CFF;
+    --accent-soft: #16223B; --good: #34C77B; --warn: #E5A93A; --crit: #F0605F;
+    --good-soft: #12261C; --warn-soft: #2A2113; --crit-soft: #2C1618;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  .report {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 56px) clamp(18px, 4vw, 44px) 64px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+
+  /* ---- Masthead ---- */
+  .masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .brand svg { display: block; }
+  .brand-name { font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+  .brand-name b { color: var(--accent); }
+  .masthead-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .04em;
+    color: var(--ink-faint);
+    text-align: right;
+    text-transform: uppercase;
+  }
+  .masthead-meta .pill {
+    display: inline-block;
+    margin-bottom: 4px;
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-soft);
+  }
+
+  /* ---- Title ---- */
+  .title-block { margin: 34px 0 30px; }
+  h1 {
+    font-size: clamp(30px, 5.4vw, 50px);
+    line-height: 1.02;
+    letter-spacing: -.028em;
+    margin: 12px 0 0;
+    text-wrap: balance;
+    font-weight: 780;
+  }
+  h1 .vs { color: var(--ink-faint); font-weight: 400; }
+  .dek {
+    margin: 16px 0 0;
+    max-width: 62ch;
+    font-size: 17px;
+    color: var(--ink-soft);
+  }
+
+  /* ---- Thesis strip ---- */
+  .thesis {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    margin: 28px 0 0;
+    flex-wrap: wrap;
+  }
+  .thesis-step {
+    flex: 1 1 0;
+    min-width: 150px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .thesis-step[data-tone="crit"] { border-color: color-mix(in srgb, var(--crit) 40%, var(--line)); }
+  .thesis-step[data-tone="warn"] { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+  .thesis-step[data-tone="accent"] { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: var(--accent-soft); }
+  .thesis-word {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .thesis-step[data-tone="crit"] .thesis-word { color: var(--crit); }
+  .thesis-step[data-tone="warn"] .thesis-word { color: var(--warn); }
+  .thesis-step[data-tone="accent"] .thesis-word { color: var(--accent); }
+  .thesis-who { margin-top: 5px; font-size: 13px; color: var(--ink-soft); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .dot.crit { background: var(--crit); } .dot.warn { background: var(--warn); }
+  .dot.good { background: var(--good); } .dot.accent { background: var(--accent); }
+
+  /* ---- Section scaffolding ---- */
+  section { margin-top: 46px; }
+  .sec-head { margin-bottom: 18px; }
+  .sec-head h2 {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: 6px 0 0;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .sec-head .sec-sub { margin: 6px 0 0; color: var(--ink-soft); font-size: 15px; max-width: 64ch; }
+  .sec-num {
+    font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+    letter-spacing: .1em;
+  }
+
+  /* ---- Signal tiles ---- */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tile-fig {
+    font-family: var(--font-mono);
+    font-size: clamp(22px, 3.2vw, 30px);
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1;
+  }
+  .tile-fig.crit { color: var(--crit); } .tile-fig.good { color: var(--good); }
+  .tile-fig.warn { color: var(--warn); } .tile-fig.accent { color: var(--accent); }
+  .tile-label { font-size: 13px; color: var(--ink-soft); line-height: 1.35; }
+  .tile-src { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: .03em; margin-top: auto; padding-top: 4px; }
+
+  /* ---- Scorecard ---- */
+  .scorecard {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .score-grid { display: grid; grid-template-columns: 1.15fr 1fr 1fr; }
+  .score-colhead {
+    display: contents;
+  }
+  .score-colhead > div {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .score-colhead .col-metric { justify-content: flex-start; }
+  .metric-row { display: contents; }
+  .metric-row > div {
+    padding: 15px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .metric-row:last-child > div { border-bottom: none; }
+  .m-name { display: flex; flex-direction: column; gap: 2px; }
+  .m-name b { font-weight: 640; font-size: 15px; }
+  .m-name span { font-size: 12.5px; color: var(--ink-faint); }
+  .cell { display: flex; flex-direction: column; gap: 7px; justify-content: center; }
+  .bar-track {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  @media (prefers-color-scheme: dark) { .bar-track { background: #0E141C; } }
+  :root[data-theme="dark"] .bar-track { background: #0E141C; }
+  .bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transform-origin: left center;
+    animation: grow 1s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .bar-fill.crit { background: var(--crit); }
+  .bar-fill.warn { background: var(--warn); }
+  .bar-fill.good { background: var(--good); }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { .bar-fill { animation: none; } }
+  .bar-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    font-weight: 600;
+    display: flex; align-items: baseline; gap: 7px;
+  }
+  .bar-tag.crit { color: var(--crit); } .bar-tag.warn { color: var(--warn); } .bar-tag.good { color: var(--good); }
+  .bar-tag .note { color: var(--ink-faint); font-weight: 400; letter-spacing: .02em; text-transform: none; font-size: 11px; }
+
+  /* ---- Access panel ---- */
+  .access { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .access-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .access-card.crit { border-top: 3px solid var(--crit); }
+  .access-card.good { border-top: 3px solid var(--good); }
+  .access-brand { display: flex; align-items: center; gap: 9px; font-weight: 680; font-size: 16px; }
+  .access-verdict {
+    font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .05em;
+    text-transform: uppercase; margin: 3px 0 14px 17px;
+  }
+  .access-card.crit .access-verdict { color: var(--crit); }
+  .access-card.good .access-verdict { color: var(--good); }
+  .access-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .access-list li {
+    display: flex; align-items: baseline; gap: 10px;
+    font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-soft);
+  }
+  .access-list li .code { color: var(--ink); }
+  .status {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    padding: 1px 7px; border-radius: 5px; flex: none; letter-spacing: .02em;
+  }
+  .status.block { color: var(--crit); background: var(--crit-soft); }
+  .status.ok { color: var(--good); background: var(--good-soft); }
+
+  /* ---- Evidence table ---- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; background: var(--surface); }
+  thead th {
+    text-align: left;
+    padding: 13px 18px;
+    background: var(--surface-2);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+    border-bottom: 1px solid var(--line);
+  }
+  thead th .dot { display: inline-block; margin-right: 7px; vertical-align: middle; }
+  tbody td { padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: top; color: var(--ink-soft); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody td.q { color: var(--ink); font-weight: 560; }
+  tbody td b { color: var(--ink); font-weight: 640; }
+  .win { color: var(--good); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; display: block; margin-top: 3px; }
+  .lose { color: var(--crit); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; display: block; margin-top: 3px; }
+
+  /* ---- Closing ---- */
+  .closing {
+    margin-top: 46px;
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+    border-radius: 18px;
+    padding: clamp(24px, 4vw, 40px);
+  }
+  .closing .quote {
+    font-size: clamp(21px, 3.4vw, 30px);
+    line-height: 1.22;
+    letter-spacing: -.02em;
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .closing .quote em { color: var(--accent); font-style: normal; }
+  .closing .amp { margin: 16px 0 0; color: var(--ink-soft); font-size: 15px; max-width: 66ch; }
+
+  /* ---- Footnote / footer ---- */
+  .footnote {
+    margin-top: 26px;
+    padding: 16px 18px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    line-height: 1.5;
+  }
+  .footnote b { color: var(--ink-soft); font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .colophon {
+    margin-top: 24px; display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap;
+    font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); letter-spacing: .04em;
+  }
+
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  @media (max-width: 720px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .score-grid { grid-template-columns: 1fr; }
+    .score-colhead { display: none; }
+    .metric-row { display: block; padding: 6px 0; }
+    .metric-row > div { border-bottom: none; padding: 8px 16px; }
+    .metric-row { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+    .cell::before {
+      content: attr(data-owner);
+      font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--ink-faint);
+    }
+    .access { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="report">
+
+  <header class="masthead">
+    <div class="brand" aria-label="marketG">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="6" cy="20" r="2.6" fill="var(--accent)"/>
+        <path d="M6 14.5a8 8 0 0 1 8 8" stroke="var(--accent)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M6 9a13.5 13.5 0 0 1 13.5 13.5" stroke="var(--accent)" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.55"/>
+      </svg>
+      <span class="brand-name">market<b>G</b></span>
+    </div>
+    <div class="masthead-meta">
+      <span class="pill">Manual Pilot · Directional</span><br>
+      AI VISIBILITY REPORT · 2026-07-11
+    </div>
+  </header>
+
+  <div class="title-block">
+    <p class="eyebrow">Generative Engine Optimization · Automotive</p>
+    <h1>General Motors <span class="vs">vs.</span> Rivian</h1>
+    <p class="dek">How AI assistants see a bloated incumbent and an AI-native challenger — measured through the same lens marketG builds. The gap isn't content. It's control.</p>
+  </div>
+
+  <div class="thesis" role="list" aria-label="Core thesis">
+    <div class="thesis-step" data-tone="crit" role="listitem">
+      <div class="thesis-word"><span class="dot crit"></span>Blocked</div>
+      <div class="thesis-who">GM — sites walled off, AI reads third parties instead.</div>
+    </div>
+    <div class="thesis-step" data-tone="warn" role="listitem">
+      <div class="thesis-word"><span class="dot warn"></span>Borrowed</div>
+      <div class="thesis-who">Rivian — visible, but on earned media it doesn't own.</div>
+    </div>
+    <div class="thesis-step" data-tone="accent" role="listitem">
+      <div class="thesis-word"><span class="dot accent"></span>Owned</div>
+      <div class="thesis-who">marketG — a first-party, evidence-backed knowledge asset.</div>
+    </div>
+  </div>
+
+  <section aria-label="Signal summary">
+    <div class="tiles">
+      <div class="tile">
+        <div class="tile-fig crit">5 / 5</div>
+        <div class="tile-label">GM sites returned <b>403 Forbidden</b> to the crawler — including robots.txt.</div>
+        <div class="tile-src">gm · chevrolet · gmc · buick · cadillac</div>
+      </div>
+      <div class="tile">
+        <div class="tile-fig good">Allowed</div>
+        <div class="tile-label">Rivian's robots.txt permits <b>GPTBot, ClaudeBot, PerplexityBot</b>.</div>
+        <div class="tile-src">rivian.com/robots.txt</div>
+      </div>
+      <div class="tile">
+        <div class="tile-fig crit">Lucid&nbsp;&gt;&nbsp;Cadillac</div>
+        <div class="tile-label">In luxury EV, AI recommends a <b>new entrant over</b> GM's flagship.</div>
+        <div class="tile-src">probe · "best luxury EV SUV"</div>
+      </div>
+      <div class="tile">
+        <div class="tile-fig good">The benchmark</div>
+        <div class="tile-label">Rivals are framed as <b>chasing the R1S</b>; it won US News off-road EV awards.</div>
+        <div class="tile-src">probe · "best off-road EV SUV"</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Scorecard">
+    <div class="sec-head">
+      <span class="sec-num">01 — SCORECARD</span>
+      <h2>AI Visibility, side by side</h2>
+      <p class="sec-sub">Four scores plus machine-readability, assessed qualitatively. The product computes these numerically per brand; here they're directional reads from the pilot.</p>
+    </div>
+
+    <div class="scorecard">
+      <div class="score-grid">
+        <div class="score-colhead">
+          <div class="col-metric">Metric</div>
+          <div><span class="dot crit"></span>General Motors</div>
+          <div><span class="dot good"></span>Rivian</div>
+        </div>
+
+        <div class="metric-row">
+          <div class="m-name"><b>Retrieval</b><span>Can AI find us?</span></div>
+          <div class="cell" data-owner="GM">
+            <div class="bar-track"><div class="bar-fill crit" style="width:24%"></div></div>
+            <div class="bar-tag crit">Low <span class="note">first-party blocked</span></div>
+          </div>
+          <div class="cell" data-owner="Rivian">
+            <div class="bar-track"><div class="bar-fill good" style="width:90%"></div></div>
+            <div class="bar-tag good">High <span class="note">crawlable, AI-open</span></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="m-name"><b>Citation</b><span>Does AI mention / cite us?</span></div>
+          <div class="cell" data-owner="GM">
+            <div class="bar-track"><div class="bar-fill warn" style="width:52%"></div></div>
+            <div class="bar-tag warn">Mixed <span class="note">Chevy ok · Buick/parent weak</span></div>
+          </div>
+          <div class="cell" data-owner="Rivian">
+            <div class="bar-track"><div class="bar-fill good" style="width:88%"></div></div>
+            <div class="bar-tag good">High <span class="note">named &amp; benchmarked</span></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="m-name"><b>Reasoning</b><span>Complex questions about us?</span></div>
+          <div class="cell" data-owner="GM">
+            <div class="bar-track"><div class="bar-fill warn" style="width:56%"></div></div>
+            <div class="bar-tag warn">Medium <span class="note">3rd-party data, uncorrectable</span></div>
+          </div>
+          <div class="cell" data-owner="Rivian">
+            <div class="bar-track"><div class="bar-fill good" style="width:86%"></div></div>
+            <div class="bar-tag good">High <span class="note">rich comparison data</span></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="m-name"><b>Trust</b><span>Is the evidence first-party?</span></div>
+          <div class="cell" data-owner="GM">
+            <div class="bar-track"><div class="bar-fill crit" style="width:22%"></div></div>
+            <div class="bar-tag crit">Low <span class="note">no first-party evidence</span></div>
+          </div>
+          <div class="cell" data-owner="Rivian">
+            <div class="bar-track"><div class="bar-fill warn" style="width:66%"></div></div>
+            <div class="bar-tag warn">Med–High <span class="note">earned, not owned</span></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="m-name"><b>Machine-readability</b><span>Can a machine ingest our own words?</span></div>
+          <div class="cell" data-owner="GM">
+            <div class="bar-track"><div class="bar-fill crit" style="width:8%"></div></div>
+            <div class="bar-tag crit">Blocked <span class="note">403 at the wall</span></div>
+          </div>
+          <div class="cell" data-owner="Rivian">
+            <div class="bar-track"><div class="bar-fill warn" style="width:60%"></div></div>
+            <div class="bar-tag warn">Open access <span class="note">but homepage is slogans</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Crawler access">
+    <div class="sec-head">
+      <span class="sec-num">02 — THE FRONT DOOR</span>
+      <h2>Can machines even read them?</h2>
+      <p class="sec-sub">Before ranking or reasoning, an AI has to ingest the source. This is where the two brands diverge most starkly.</p>
+    </div>
+
+    <div class="access">
+      <div class="access-card crit">
+        <div class="access-brand"><span class="dot crit"></span>General Motors</div>
+        <div class="access-verdict">Walled off</div>
+        <ul class="access-list">
+          <li><span class="status block">403</span><span class="code">gm.com</span></li>
+          <li><span class="status block">403</span><span class="code">chevrolet.com</span></li>
+          <li><span class="status block">403</span><span class="code">gmc.com</span></li>
+          <li><span class="status block">403</span><span class="code">buick.com</span></li>
+          <li><span class="status block">403</span><span class="code">cadillac.com</span></li>
+          <li><span class="status block">403</span><span class="code">chevrolet.com/robots.txt</span></li>
+        </ul>
+      </div>
+      <div class="access-card good">
+        <div class="access-brand"><span class="dot good"></span>Rivian</div>
+        <div class="access-verdict">Open to AI</div>
+        <ul class="access-list">
+          <li><span class="status ok">200</span><span class="code">rivian.com — loads</span></li>
+          <li><span class="status ok">*</span><span class="code">user-agent: * — no AI blocks</span></li>
+          <li><span class="status ok">OK</span><span class="code">GPTBot allowed</span></li>
+          <li><span class="status ok">OK</span><span class="code">ClaudeBot allowed</span></li>
+          <li><span class="status ok">OK</span><span class="code">PerplexityBot allowed</span></li>
+          <li><span class="status block">thin</span><span class="code">homepage = slogan, specs buried</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Evidence">
+    <div class="sec-head">
+      <span class="sec-num">03 — WHAT AI ACTUALLY SAYS</span>
+      <h2>The probe, question by question</h2>
+      <p class="sec-sub">Representative buyer questions run against web/AI. Note who wins the recommendation — and who authors it.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Buyer question</th>
+            <th><span class="dot crit"></span>General Motors</th>
+            <th><span class="dot good"></span>Rivian</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="q">"Best electric truck 2026"</td>
+            <td>Silverado EV mentioned mid-pack in the spec comparison.<span class="lose">Not the pick</span></td>
+            <td><b>R1T leads</b> on range (420 mi), power (up to 1,025 hp), unique Gear Tunnel.<span class="win">Leads the field</span></td>
+          </tr>
+          <tr>
+            <td class="q">"Best off-road electric SUV 2026"</td>
+            <td>Hummer EV framed as an <em>alternative that chases</em> the R1S.<span class="lose">Framed as the chaser</span></td>
+            <td><b>R1S "easily won"</b> US News off-road EV awards; IIHS Top Safety Pick+.<span class="win">Category benchmark</span></td>
+          </tr>
+          <tr>
+            <td class="q">"Best luxury EV SUV 2026"</td>
+            <td>Cadillac Lyriq has strong specs — but AI's verdict favors <b>Lucid Gravity</b>.<span class="lose">Out-recommended by a new entrant</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td class="q">"Is the brand any good?"</td>
+            <td>Buick "inconsistent quality"; Chevy sales down ~6%.<span class="lose">Third-party narrative</span></td>
+            <td><b>#1 owner satisfaction</b>, 3 years running (85% would rebuy).<span class="win">Best in survey</span></td>
+          </tr>
+          <tr>
+            <td class="q">Who authors the answer?</td>
+            <td>Edmunds · US News · Consumer Reports · dealer sites.<span class="lose">Not GM</span></td>
+            <td>Same third parties — <b>plus open first-party access</b>.<span class="win">Can be corrected</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="closing">
+    <p class="quote">Your AI presence today is either <em>blocked</em> or <em>borrowed</em>.<br>marketG makes it <em>owned</em>.</p>
+    <p class="amp">Nobody is doing GEO deliberately yet. Incumbents can't get through the front door; challengers ride a media wave that fades as the novelty wears off. The first brand to engineer a governed, first-party, evidence-backed knowledge asset — a Semantic Business Twin — captures a capability none of them currently has.</p>
+  </div>
+
+  <div class="footnote">
+    <b>Method &amp; limits</b><br>
+    Manual dry-run of the marketG pipeline — no product built yet. Web search is used as a proxy for live AI probing (the product queries ChatGPT, Claude &amp; Perplexity directly). A 403 to our crawler indicates a machine-readability barrier but does not by itself prove specific AI crawlers are blocked. One company pair, one afternoon: findings are directional, not statistically rigorous.
+  </div>
+
+  <div class="colophon">
+    <span>marketG — Generative Engine Optimization</span>
+    <span>Pilot 03 · GM × Rivian · 2026-07-11</span>
+  </div>
+
+</div>
