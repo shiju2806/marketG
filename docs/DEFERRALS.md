@@ -57,6 +57,7 @@ _Last updated: 2026-07-11_
 | A-05 | Documentation Intelligence | ⚪ |
 | A-06 | Compliance Intelligence | ⚪ |
 | A-07 | M&A Knowledge Discovery | ⚪ |
+| A-08 | In-app recommendation / guided-selling advisor (embeddable widget grounded in the twin — content/reasoning-based recommendations with evidence; complements behavioral recommenders, strong on cold-start + explainability) | ⚪ |
 
 _Beachhead app is **AI Visibility**; all above reuse the same Semantic Business Twin._
 
