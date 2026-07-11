@@ -25,5 +25,20 @@ class Settings(BaseSettings):
     worker_id: str = "worker-1"
     worker_poll_seconds: float = 2.0
 
+    # LLM / embeddings (TECH_STACK seams). Default to the keyless mock so the
+    # pipeline runs locally without provider credentials or internet.
+    llm_provider: str = "mock"            # mock | anthropic | openai
+    embedding_provider: str = "mock"      # mock | openai
+    embed_dim: int = 1536                 # must match chunk.embedding vector(N)
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    openai_embed_model: str = "text-embedding-3-small"
+    anthropic_model: str = "claude-sonnet-5"
+
+    # Chunking / extraction limits (D-05 cost control: cap work per unit).
+    chunk_max_chars: int = 2400           # split a section beyond this
+    chunk_min_chars: int = 60             # drop trivial fragments
+    extract_max_chars_per_chunk: int = 6000  # truncate LLM input per chunk
+
 
 settings = Settings()

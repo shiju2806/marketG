@@ -36,6 +36,15 @@ async def upload_raw(key: str, html: str) -> str:
     return key
 
 
+async def download_raw(key: str) -> str:
+    """Fetch a previously stored raw document (rendered HTML) by key."""
+    url = f"{settings.supabase_url}/storage/v1/object/{settings.storage_bucket}/{key}"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, headers=_auth_headers(), timeout=30.0)
+        resp.raise_for_status()
+        return resp.text
+
+
 async def ensure_bucket() -> None:
     """Create the raw-documents bucket if it doesn't exist (idempotent, dev helper)."""
     url = f"{settings.supabase_url}/storage/v1/bucket"

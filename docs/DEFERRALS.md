@@ -18,7 +18,7 @@ _Last updated: 2026-07-11_
 | D-02 | External-probe sampling & answer analysis | 3 samples per question per model; LLM classifier for org-mention / competitor-mention / claim-consistency; aggregate by majority/mean | Before **Sprint 4b** | 🔵 |
 | D-03 | Entity resolution thresholds | Match if embedding cosine ≥ 0.90 **and** fuzzy name match; else new candidate | Before **Sprint 3** | 🔵 |
 | D-04 | Ontology seed | Small seeded automotive ontology; grow over time; no giant upfront taxonomy | Before **Sprint 3** | 🔵 |
-| D-05 | Cost controls | Per-account token/cost budget + cap; log latency/tokens/cost per stage | Before **Sprint 2** | 🔵 |
+| D-05 | Cost controls | **Partly done (Sprint 2):** per-stage token/cost logged to job.metrics; per-chunk LLM-input truncation cap. **Still pending:** per-account budget + enforcement | When multi-account load is real | 🔵 |
 
 ## 2. Deferred Infrastructure (MVP collapses to Supabase — from TECH_STACK)
 

@@ -15,6 +15,7 @@ from app.crawler.classifier import classify_page
 from app.crawler.machine_readability import fetch_ai_crawler_policy
 from app.db import close_pool, get_pool
 from app.jobs import queue
+from app.pipeline.extract import process_document
 from app.storage import ensure_bucket, raw_key, upload_raw
 
 import httpx
@@ -40,12 +41,13 @@ async def handle_crawl(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
     )
 
     ingested = 0
+    document_ids: list = []
     for page in pages:
         if not page.html:  # errored page — skip persistence, still counted in metrics
             continue
         key = raw_key(str(source["account_id"]), str(source["source_id"]), page.content_hash)
         await upload_raw(key, page.html)
-        await pool.execute(
+        document_id = await pool.fetchval(
             """
             insert into document (
                 account_id, organization_id, source_id, url, page_classification,
@@ -62,6 +64,7 @@ async def handle_crawl(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
                 has_schema_org      = excluded.has_schema_org,
                 ai_crawler_policy   = excluded.ai_crawler_policy,
                 crawled_at          = now()
+            returning document_id
             """,
             source["account_id"],
             source["organization_id"],
@@ -75,17 +78,39 @@ async def handle_crawl(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
             page.has_schema_org,
             ai_policy,
         )
+        document_ids.append(document_id)
         ingested += 1
+
+    # Fan out one extract job per document (ADR-007: independent, scalable units).
+    for document_id in document_ids:
+        await queue.enqueue(
+            pool,
+            account_id=source["account_id"],
+            job_type="extract",
+            organization_id=source["organization_id"],
+            source_id=source["source_id"],
+            payload={"document_id": str(document_id)},
+        )
 
     await pool.execute("update source set status='done' where source_id=$1", source["source_id"])
     return {
         "pages_seen": len(pages),
         "pages_ingested": ingested,
+        "extract_jobs": len(document_ids),
         "ai_crawler_policy": ai_policy,
     }
 
 
-HANDLERS = {"crawl": handle_crawl}
+async def handle_extract(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
+    """Normalize -> chunk -> embed -> extract entities for one document."""
+    document_id = job["payload"]["document_id"]
+    document = await pool.fetchrow("select * from document where document_id=$1", document_id)
+    if document is None:
+        raise ValueError(f"document {document_id} not found")
+    return await process_document(pool, document)
+
+
+HANDLERS = {"crawl": handle_crawl, "extract": handle_extract}
 
 
 async def run() -> None:
