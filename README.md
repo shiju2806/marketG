@@ -19,6 +19,8 @@ The first commercial application is **AI Visibility**: measuring whether AI can 
 - [MVP Engineering Roadmap](docs/MVP_ROADMAP.md) — sprint-by-sprint implementation plan.
 - [Glossary & Concept Map](docs/GLOSSARY.md) — shared vocabulary; **start here** to understand the terms.
 - [Technology Stack (MVP vs. Target)](docs/TECH_STACK.md) — the concrete stack we build first and how it scales.
+- [Domain Model & ADRs](docs/DOMAIN_MODEL_AND_ADRS.md) — **locked pre-build decisions**; the schema follows this.
+- Pilots: [GM](docs/pilots/gm-ai-visibility-pilot.md) · [Rivian](docs/pilots/rivian-ai-visibility-pilot.md) · [GM-vs-Rivian one-pager](docs/pilots/gm-vs-rivian-onepager.html) — hypothesis validation.
 
 ## Status
 
