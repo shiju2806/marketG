@@ -117,7 +117,22 @@ async def handle_probe(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
     return await run_probe(pool, job["account_id"], job["organization_id"])
 
 
-HANDLERS = {"crawl": handle_crawl, "extract": handle_extract, "probe": handle_probe}
+async def handle_analyze(pool: asyncpg.Pool, job: asyncpg.Record) -> dict:
+    """One-shot: crawl -> twin -> scores -> probe -> recommendations."""
+    from app.pipeline.full import run_full_analysis
+
+    source = await pool.fetchrow("select * from source where source_id=$1", job["source_id"])
+    if source is None:
+        raise ValueError(f"source {job['source_id']} not found")
+    return await run_full_analysis(pool, job["job_id"], job["account_id"], source)
+
+
+HANDLERS = {
+    "crawl": handle_crawl,
+    "extract": handle_extract,
+    "probe": handle_probe,
+    "analyze": handle_analyze,
+}
 
 
 async def run() -> None:

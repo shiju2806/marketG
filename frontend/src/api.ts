@@ -68,6 +68,15 @@ export interface ProbeReport {
 
 export const api = {
   listOrganizations: () => req<Organization[]>("/organizations"),
+  analyze: (body: { name: string; website: string }) =>
+    req<{ job_id: string; organization_id: string }>("/analyze", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  analyzeStatus: (jobId: string) =>
+    req<{ status: string; stage: string | null; organization_id: string; error: string | null }>(
+      `/analyze/${jobId}`
+    ),
   createOrganization: (body: { name: string; website: string }) =>
     req<Organization>("/organizations", { method: "POST", body: JSON.stringify(body) }),
   score: (org: string) => req<VisibilityScore>(`/visibility-score?organization_id=${org}`),

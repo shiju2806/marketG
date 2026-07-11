@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import crawl, organizations, probe, recommendations, sources, twin, visibility
+from app.api import analyze, crawl, organizations, probe, recommendations, sources, twin, visibility
 from app.config import settings
 from app.db import close_pool, get_pool
 
@@ -43,6 +43,7 @@ app.include_router(twin.router)
 app.include_router(visibility.router)
 app.include_router(probe.router)
 app.include_router(recommendations.router)
+app.include_router(analyze.router)
 
 
 @app.get("/health", tags=["meta"])

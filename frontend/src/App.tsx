@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   api,
   type Organization,
@@ -18,6 +18,8 @@ export default function App() {
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", website: "" });
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
 
   useEffect(() => {
     api.listOrganizations()
@@ -36,6 +38,39 @@ export default function App() {
     setProbe(p);
     setRecs(r);
     setScore(await api.score(org).catch(() => null));
+  }
+
+  async function analyzeWebsite(e: FormEvent) {
+    e.preventDefault();
+    if (!form.name || !form.website) return;
+    setError(null);
+    try {
+      const { job_id, organization_id } = await api.analyze(form);
+      setAnalyzing("starting…");
+      // Poll status until the pipeline finishes.
+      const poll = async (): Promise<void> => {
+        const s = await api.analyzeStatus(job_id);
+        setAnalyzing(s.stage ?? s.status);
+        if (s.status === "done") {
+          setAnalyzing(null);
+          setForm({ name: "", website: "" });
+          const list = await api.listOrganizations();
+          setOrgs(list);
+          setOrgId(organization_id);
+          return;
+        }
+        if (s.status === "failed") {
+          setAnalyzing(null);
+          setError(s.error ?? "analysis failed");
+          return;
+        }
+        setTimeout(poll, 2500);
+      };
+      setTimeout(poll, 2500);
+    } catch (err) {
+      setAnalyzing(null);
+      setError(String(err));
+    }
   }
 
   async function act(label: string, fn: () => Promise<unknown>) {
@@ -72,6 +107,31 @@ export default function App() {
       {error && (
         <div className="mt-4 rounded-lg border border-crit/40 bg-crit/10 px-4 py-2 text-sm text-crit">{error}</div>
       )}
+
+      {/* Analyze a website — the onboarding flow */}
+      <form onSubmit={analyzeWebsite} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-5">
+        <div className="flex flex-1 flex-col gap-1">
+          <label className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">Company</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Rivian" disabled={analyzing !== null}
+            className="rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
+        </div>
+        <div className="flex flex-[2] flex-col gap-1">
+          <label className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">Website</label>
+          <input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })}
+            placeholder="rivian.com" disabled={analyzing !== null}
+            className="rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
+        </div>
+        <button type="submit" disabled={analyzing !== null || !form.name || !form.website}
+          className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-2 text-sm text-accent transition hover:bg-accent/20 disabled:opacity-40">
+          {analyzing ? "Analyzing…" : "Analyze"}
+        </button>
+        {analyzing && (
+          <div className="w-full font-mono text-xs text-accent">
+            <span className="inline-block animate-pulse">●</span> {analyzing} — this can take a minute…
+          </div>
+        )}
+      </form>
 
       {org && (
         <>
