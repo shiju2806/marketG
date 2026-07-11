@@ -11,8 +11,25 @@ import hashlib
 import math
 import re
 
-from app.llm.base import EmbeddingProvider, ExtractedEntity, LLMProvider, TokenUsage
+from app.llm.base import (
+    ExtractedClaim,
+    ExtractedEntity,
+    ExtractedRelationship,
+    KnowledgeExtraction,
+    TokenUsage,
+)
 from app.verticals.base import VerticalPack
+
+_SPEC = re.compile(r"(\d[\d,\.]*)\s*(miles|mph|mpg|hp|horsepower|lbs|kwh|inches|seconds)", re.I)
+_PRICE = re.compile(r"\$[\d,]+(?:\.\d+)?")
+_REL_PREDICATE = {
+    "Technology": "uses",
+    "Integration": "integrates_with",
+    "Regulation": "complies_with",
+    "Competitor": "competes_with",
+    "Feature": "has_feature",
+    "Award": "won",
+}
 
 _TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9\-/.]+")
 # Multi-word Proper Noun sequences, e.g. "Super Cruise", "Land Cruiser".
@@ -77,3 +94,34 @@ class MockLLMProvider:
 
         usage = TokenUsage(tokens=_est_tokens(text))
         return list(found.values()), usage
+
+    async def extract_knowledge(
+        self, text: str, pack: VerticalPack
+    ) -> tuple[KnowledgeExtraction, TokenUsage]:
+        entities, usage = await self.extract_entities(text, pack)
+
+        # Subject for relationships/claims: prefer a Vehicle, else generic "product".
+        vehicle = next((e for e in entities if e.entity_type == "Vehicle"), None)
+        subject = vehicle.name if vehicle else "product"
+
+        relationships: list[ExtractedRelationship] = []
+        if vehicle:
+            for ent in entities:
+                pred = _REL_PREDICATE.get(ent.entity_type)
+                if pred and ent.name != vehicle.name:
+                    relationships.append(
+                        ExtractedRelationship(vehicle.name, pred, ent.name, confidence=0.6)
+                    )
+
+        claims: list[ExtractedClaim] = []
+        for num, unit in _SPEC.findall(text):
+            claims.append(
+                ExtractedClaim(subject, f"spec_{unit.lower()}", value=f"{num} {unit}",
+                               claim_type="spec", confidence=0.7)
+            )
+        for price in _PRICE.findall(text):
+            claims.append(
+                ExtractedClaim(subject, "price", value=price, claim_type="pricing", confidence=0.7)
+            )
+
+        return KnowledgeExtraction(entities, relationships, claims), usage

@@ -9,7 +9,7 @@ import httpx
 
 from app.config import settings
 from app.llm.base import TokenUsage
-from app.llm.util import parse_entities_json
+from app.llm.util import parse_entities_json, parse_knowledge_json
 from app.verticals.base import VerticalPack
 
 # text-embedding-3-small: ~$0.02 / 1M tokens.
@@ -21,6 +21,18 @@ _LLM_OUT_PER_1M = 0.60
 _SYSTEM = (
     "You extract business entities from web page text. Respond with a JSON object "
     '{"entities": [{"name": ..., "entity_type": ..., "confidence": 0-1}]}. '
+    "Use only the provided entity types. No prose."
+)
+
+_KNOWLEDGE_SYSTEM = (
+    "You extract structured business knowledge from web page text. Respond with a "
+    "JSON object with three arrays:\n"
+    '  "entities":      [{"name","entity_type","confidence"}]\n'
+    '  "relationships": [{"subject","predicate","object","confidence"}]\n'
+    '  "claims":        [{"subject","predicate","object","value","claim_type","confidence"}]\n'
+    "subject/object in relationships are entity names. Claims are assertions "
+    "(specs, performance, compliance, awards) — claim_type one of: spec, performance, "
+    "compliance, capability, comparison, award, safety, pricing. confidence is 0-1. "
     "Use only the provided entity types. No prose."
 )
 
@@ -81,11 +93,41 @@ class OpenAILLMProvider:
 
         raw = data["choices"][0]["message"]["content"]
         entities = parse_entities_json(raw)
+        return entities, self._usage(data)
+
+    async def extract_knowledge(self, text: str, pack: VerticalPack):
+        if not settings.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY not set")
+        prompt = (
+            f"{pack.extraction_hint}\n"
+            f"Allowed entity_type values: {', '.join(pack.entity_types)}.\n\n"
+            f"Page text:\n{text}"
+        )
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                json={
+                    "model": self.model,
+                    "response_format": {"type": "json_object"},
+                    "messages": [
+                        {"role": "system", "content": _KNOWLEDGE_SYSTEM},
+                        {"role": "user", "content": prompt},
+                    ],
+                },
+                timeout=90.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        knowledge = parse_knowledge_json(data["choices"][0]["message"]["content"])
+        return knowledge, self._usage(data)
+
+    @staticmethod
+    def _usage(data: dict) -> TokenUsage:
         u = data.get("usage", {})
         cost = round(
             u.get("prompt_tokens", 0) / 1_000_000 * _LLM_IN_PER_1M
             + u.get("completion_tokens", 0) / 1_000_000 * _LLM_OUT_PER_1M,
             6,
         )
-        usage = TokenUsage(tokens=u.get("total_tokens", 0), cost_usd=cost)
-        return entities, usage
+        return TokenUsage(tokens=u.get("total_tokens", 0), cost_usd=cost)

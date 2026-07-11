@@ -16,8 +16,9 @@ _Last updated: 2026-07-11_
 |----|------|-----------------|--------------------|--------|
 | D-01 | Scoring formulas (the four scores + machine-readability) | Each 0–100 from normalized signals; overall = equal-weighted mean; breakdown always shown | Before **Sprint 4** | 🔵 |
 | D-02 | External-probe sampling & answer analysis | 3 samples per question per model; LLM classifier for org-mention / competitor-mention / claim-consistency; aggregate by majority/mean | Before **Sprint 4b** | 🔵 |
-| D-03 | Entity resolution thresholds | Match if embedding cosine ≥ 0.90 **and** fuzzy name match; else new candidate | Before **Sprint 3** | 🔵 |
-| D-04 | Ontology seed | Small seeded automotive ontology; grow over time; no giant upfront taxonomy | Before **Sprint 3** | 🔵 |
+| D-03 | Entity resolution thresholds | **Partly done (Sprint 3):** ontology-seed canonicalization + difflib fuzzy-name merge (≥0.90). **Still pending:** embedding-cosine resolution | When name-only dedup proves insufficient | 🔵 |
+| D-04 | Ontology seed | **Done (Sprint 3):** small automotive seed in the vertical pack, used for canonicalization; grows over time | Revisit per vertical | 🟢 |
+| D-06 | **Predicate normalization** (canonical predicate ontology) — the LLM phrases the same relation/claim differently ("has" vs "has range"), so conflict detection + relationship dedup miss real matches. Discovered in Sprint 3 verification | Interim: predicates stored verbatim; conflict logic unit-tested but under-fires e2e | Before conflict detection is relied on (Sprint 4+) | 🔵 |
 | D-05 | Cost controls | **Partly done (Sprint 2):** per-stage token/cost logged to job.metrics; per-chunk LLM-input truncation cap. **Still pending:** per-account budget + enforcement | When multi-account load is real | 🔵 |
 
 ## 2. Deferred Infrastructure (MVP collapses to Supabase — from TECH_STACK)

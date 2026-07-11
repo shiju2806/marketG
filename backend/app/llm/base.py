@@ -28,6 +28,31 @@ class ExtractedEntity:
     attributes: dict = field(default_factory=dict)
 
 
+@dataclass
+class ExtractedRelationship:
+    subject: str
+    predicate: str
+    object: str
+    confidence: float = 0.6
+
+
+@dataclass
+class ExtractedClaim:
+    subject: str
+    predicate: str
+    object: str = ""
+    value: str = ""
+    claim_type: str = "capability"
+    confidence: float = 0.6
+
+
+@dataclass
+class KnowledgeExtraction:
+    entities: list[ExtractedEntity] = field(default_factory=list)
+    relationships: list[ExtractedRelationship] = field(default_factory=list)
+    claims: list[ExtractedClaim] = field(default_factory=list)
+
+
 class EmbeddingProvider(Protocol):
     dim: int
 
@@ -39,4 +64,9 @@ class LLMProvider(Protocol):
     async def extract_entities(
         self, text: str, pack: VerticalPack
     ) -> tuple[list[ExtractedEntity], TokenUsage]:
+        ...
+
+    async def extract_knowledge(
+        self, text: str, pack: VerticalPack
+    ) -> tuple[KnowledgeExtraction, TokenUsage]:
         ...

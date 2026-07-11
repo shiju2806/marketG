@@ -7,7 +7,64 @@ from __future__ import annotations
 
 import json
 
-from app.llm.base import ExtractedEntity
+from app.llm.base import (
+    ExtractedClaim,
+    ExtractedEntity,
+    ExtractedRelationship,
+    KnowledgeExtraction,
+)
+
+
+def _clamp(x, default=0.6) -> float:
+    try:
+        return max(0.0, min(1.0, float(x)))
+    except (TypeError, ValueError):
+        return default
+
+
+def parse_knowledge_json(raw: str) -> KnowledgeExtraction:
+    """Parse {"entities":[...], "relationships":[...], "claims":[...]}."""
+    obj = _extract_object(raw)
+    if not isinstance(obj, dict):
+        return KnowledgeExtraction()
+
+    entities = [
+        ExtractedEntity(str(e["name"]).strip(), str(e.get("entity_type", "Entity")), _clamp(e.get("confidence")))
+        for e in obj.get("entities", [])
+        if isinstance(e, dict) and e.get("name")
+    ]
+    relationships = [
+        ExtractedRelationship(
+            str(r["subject"]).strip(), str(r["predicate"]).strip(), str(r["object"]).strip(),
+            _clamp(r.get("confidence")),
+        )
+        for r in obj.get("relationships", [])
+        if isinstance(r, dict) and r.get("subject") and r.get("predicate") and r.get("object")
+    ]
+    claims = [
+        ExtractedClaim(
+            subject=str(c["subject"]).strip(),
+            predicate=str(c.get("predicate", "")).strip(),
+            object=str(c.get("object", "")).strip(),
+            value=str(c.get("value", "")).strip(),
+            claim_type=str(c.get("claim_type", "capability")).strip(),
+            confidence=_clamp(c.get("confidence")),
+        )
+        for c in obj.get("claims", [])
+        if isinstance(c, dict) and c.get("subject") and c.get("predicate")
+    ]
+    return KnowledgeExtraction(entities=entities, relationships=relationships, claims=claims)
+
+
+def _extract_object(raw: str):
+    raw = raw.strip()
+    start, end = raw.find("{"), raw.rfind("}")
+    if start != -1 and end > start:
+        try:
+            return json.loads(raw[start : end + 1])
+        except json.JSONDecodeError:
+            return None
+    return None
 
 
 def parse_entities_json(raw: str) -> list[ExtractedEntity]:

@@ -124,6 +124,44 @@ async def main(seed_url: str) -> int:
         for e in ent_rows:
             print(f"  [{e['confidence']}] {e['entity_type']:<12} {e['canonical_name']}")
 
+        # Sprint 3: the Semantic Business Twin.
+        rel_n = await pool.fetchval(
+            "select count(*) from relationship where organization_id=$1 and valid_to is null", DEMO_ORG
+        )
+        claim_n = await pool.fetchval(
+            "select count(*) from claim where organization_id=$1 and valid_to is null", DEMO_ORG
+        )
+        conflict_n = await pool.fetchval(
+            "select count(*) from conflict where organization_id=$1", DEMO_ORG
+        )
+        ev_n = await pool.fetchval("select count(*) from evidence where organization_id=$1", DEMO_ORG)
+        print(f"\n=== TWIN: {rel_n} relationships, {claim_n} claims, {ev_n} evidence, {conflict_n} conflicts ===")
+        sample_claims = await pool.fetch(
+            """
+            select coalesce(e.canonical_name, c.subject_text) subj, c.predicate, c.value, c.object,
+                   c.claim_type, c.confidence
+              from claim c left join entity e on e.entity_id=c.subject_entity_id
+             where c.organization_id=$1 and c.valid_to is null
+             order by c.confidence desc nulls last limit 12
+            """,
+            DEMO_ORG,
+        )
+        for c in sample_claims:
+            val = c["value"] or c["object"] or ""
+            print(f"  claim [{c['confidence']}] {c['subj']} —{c['predicate']}→ {val} ({c['claim_type']})")
+        sample_rels = await pool.fetch(
+            """
+            select s.canonical_name subj, r.predicate, o.canonical_name obj, r.confidence
+              from relationship r
+              join entity s on s.entity_id=r.subject_entity_id
+              join entity o on o.entity_id=r.object_entity_id
+             where r.organization_id=$1 and r.valid_to is null limit 10
+            """,
+            DEMO_ORG,
+        )
+        for r in sample_rels:
+            print(f"  rel   [{r['confidence']}] {r['subj']} —{r['predicate']}→ {r['obj']}")
+
         # A hybrid-retrieval sanity check: FTS finds a spec chunk.
         fts_hit = await pool.fetchval(
             """
@@ -136,7 +174,7 @@ async def main(seed_url: str) -> int:
 
         # Verify account isolation invariant across all Sprint-1/2 tables.
         leaked = 0
-        for tbl in ("document", "chunk", "entity"):
+        for tbl in ("document", "chunk", "entity", "relationship", "claim", "evidence"):
             leaked += await pool.fetchval(
                 f"select count(*) from {tbl} where account_id <> $1", DEMO_ACCOUNT
             )
