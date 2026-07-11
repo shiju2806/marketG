@@ -6,11 +6,13 @@ fold the Citation score + earned-vs-owned back onto the org's latest visibility 
 from __future__ import annotations
 
 import time
+from collections import Counter
 from statistics import mean
 
 from app.config import settings
 from app.probe.analysis import analyze_answer
 from app.probe.factory import available_targets
+from app.verticals.registry import get_vertical_pack
 from app.visibility.questions import generate_category_questions
 from app.visibility.scoring import to_score
 
@@ -18,17 +20,14 @@ from app.visibility.scoring import to_score
 async def run_probe(pool, account_id, organization_id, *, requested_targets=None, samples=None) -> dict:
     samples = samples or settings.probe_samples
     org = await pool.fetchrow(
-        "select name, website from organization where organization_id=$1", organization_id
+        "select name, website, vertical_pack_id from organization where organization_id=$1",
+        organization_id,
     )
-    org_names = [org["name"]] if org else []
-    competitors = [
-        r["canonical_name"]
-        for r in await pool.fetch(
-            "select canonical_name from entity where organization_id=$1 and entity_type='Competitor' "
-            "and status='resolved'",
-            organization_id,
-        )
-    ]
+    org_name = org["name"] if org else ""
+    org_names = [org_name] if org_name else []
+    pack = get_vertical_pack(org["vertical_pack_id"] if org else "automotive")
+    # Auto-detect competitors: the vertical's brand universe, minus the org itself.
+    competitors = [b for b in pack.competitor_brands if b.lower() != org_name.lower()]
     targets = available_targets(requested_targets)
     # D-07: probe UNBRANDED category questions so mentions are unprompted.
     questions = await generate_category_questions(pool, organization_id)
@@ -45,6 +44,8 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
     mention_flags: list[float] = []
     first_total, third_total = 0, 0
     total_cost = 0.0
+    you_mentions = 0
+    brand_counts: Counter[str] = Counter()
 
     for q in questions:
         for target in targets:
@@ -62,6 +63,10 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
                     org_names=org_names, competitor_names=competitors, org_website=org["website"],
                 )
                 mention_flags.append(1.0 if a["organization_mentioned"] else 0.0)
+                if a["organization_mentioned"]:
+                    you_mentions += 1
+                for brand in a["competitor_mentions"]:
+                    brand_counts[brand] += 1
                 first_total += a["first_party"]
                 third_total += a["third_party"]
                 total_cost += ans.cost_usd
@@ -80,9 +85,17 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
                     a["first_party"], a["third_party"], latency_ms, ans.tokens, round(ans.cost_usd, 4),
                 )
 
+    total_results = len(mention_flags)
     citation_signal = mean(mention_flags) if mention_flags else 0.0
     citation_score = to_score(citation_signal)
     earned_owned = round(first_total / (first_total + third_total), 2) if (first_total + third_total) else None
+
+    # Share of voice: the org + every competitor brand AI named, ranked by mentions.
+    sov = [{"brand": org_name, "mentions": you_mentions, "is_you": True}]
+    for brand, count in brand_counts.most_common():
+        sov.append({"brand": brand, "mentions": count, "is_you": False})
+    for row in sov:
+        row["share"] = round(row["mentions"] / total_results, 2) if total_results else 0.0
 
     await pool.execute(
         """
@@ -91,7 +104,7 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
         """,
         probe_run_id, citation_score, earned_owned,
         {"cost_usd": round(total_cost, 6), "targets_ran": [t.name for t in targets],
-         "results": len(mention_flags)},
+         "results": total_results, "share_of_voice": sov},
     )
 
     updated = await _apply_citation_to_visibility(pool, organization_id, citation_score)

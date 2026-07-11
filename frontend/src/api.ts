@@ -45,23 +45,37 @@ export interface Recommendation {
   expected_impact: "high" | "medium" | "low";
 }
 
-export interface TwinSummary {
-  entities: number;
-  relationships: number;
-  claims: number;
-  evidence: number;
-  conflicts: number;
-  entities_by_type: { entity_type: string; n: number }[];
+export interface ShareOfVoice {
+  brand: string;
+  mentions: number;
+  share: number;
+  is_you: boolean;
+}
+
+export interface ProbeQuestion {
+  question: string;
+  model: string;
+  organization_mentioned: boolean;
+  competitor_mentions: string[];
+  answer: string;
+}
+
+export interface ProbeReport {
+  run: { probe_run_id: string; citation: number | null; targets: string[]; created_at: string } | null;
+  share_of_voice: ShareOfVoice[];
+  questions: ProbeQuestion[];
 }
 
 export const api = {
   listOrganizations: () => req<Organization[]>("/organizations"),
   createOrganization: (body: { name: string; website: string }) =>
     req<Organization>("/organizations", { method: "POST", body: JSON.stringify(body) }),
-  twin: (org: string) => req<TwinSummary>(`/semantic-twin?organization_id=${org}`),
   score: (org: string) => req<VisibilityScore>(`/visibility-score?organization_id=${org}`),
   runVisibility: (org: string) =>
     req<{ run_id: string }>(`/visibility/run?organization_id=${org}`, { method: "POST" }),
+  probeLatest: (org: string) => req<ProbeReport>(`/probe/latest?organization_id=${org}`),
+  runProbe: (org: string) =>
+    req<{ citation: number }>(`/probe?organization_id=${org}`, { method: "POST" }),
   recommendations: (org: string) => req<Recommendation[]>(`/recommendations?organization_id=${org}`),
   generateRecommendations: (org: string) =>
     req<{ count: number }>(`/recommendations/generate?organization_id=${org}`, { method: "POST" }),

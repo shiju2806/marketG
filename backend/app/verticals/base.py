@@ -29,3 +29,6 @@ class VerticalPack:
     # Category / UNBRANDED questions for the external probe (D-07): measure whether
     # AI names the brand *unprompted* vs competitors. No brand/vehicle placeholders.
     category_questions: tuple[str, ...] = ()
+    # Known brands in this vertical — used to AUTO-DETECT competitor share-of-voice
+    # in AI answers (no per-customer setup).
+    competitor_brands: tuple[str, ...] = ()

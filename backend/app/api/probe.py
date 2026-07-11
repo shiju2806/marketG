@@ -1,4 +1,9 @@
-"""External AI Probe API (HRRE §13). Async — external calls are slow + metered."""
+"""External AI Probe API (HRRE §13).
+
+POST runs inline (a handful of external calls, ~10-20s) so the dashboard needs no
+worker. GET returns the latest probe as a report: share-of-voice + per-question
+answers.
+"""
 from __future__ import annotations
 
 from uuid import UUID
@@ -7,12 +12,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import require_account
 from app.db import get_pool
-from app.jobs import queue
+from app.probe.engine import run_probe
 
 router = APIRouter(prefix="/api/v1", tags=["probe"])
 
 
-@router.post("/probe", status_code=202)
+@router.post("/probe", status_code=201)
 async def start_probe(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
     pool = await get_pool()
     org = await pool.fetchrow(
@@ -21,26 +26,34 @@ async def start_probe(organization_id: UUID = Query(...), account_id: UUID = Dep
     )
     if org is None:
         raise HTTPException(status_code=404, detail="organization not found")
-    job_id = await queue.enqueue(
-        pool, account_id=account_id, job_type="probe", organization_id=organization_id
-    )
-    return {"job_id": job_id, "status": "queued"}
+    return await run_probe(pool, account_id, organization_id)
 
 
-@router.get("/probe/{probe_run_id}")
-async def probe_results(probe_run_id: UUID, account_id: UUID = Depends(require_account)):
+@router.get("/probe/latest")
+async def latest_probe(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
     pool = await get_pool()
     run = await pool.fetchrow(
-        "select * from probe_run where probe_run_id=$1 and account_id=$2", probe_run_id, account_id
+        "select * from probe_run where organization_id=$1 and account_id=$2 and status='done' "
+        "order by created_at desc limit 1",
+        organization_id, account_id,
     )
     if run is None:
-        raise HTTPException(status_code=404, detail="probe run not found")
+        return {"run": None, "share_of_voice": [], "questions": []}
     results = await pool.fetch(
         """
-        select question, model, organization_mentioned, organization_cited, competitor_mentions,
-               first_party, third_party, left(answer, 300) as answer_preview
+        select question, model, organization_mentioned, competitor_mentions,
+               left(answer, 400) as answer
           from probe_result where probe_run_id=$1 order by question, model
         """,
-        probe_run_id,
+        run["probe_run_id"],
     )
-    return {"run": dict(run), "results": [dict(r) for r in results]}
+    return {
+        "run": {
+            "probe_run_id": str(run["probe_run_id"]),
+            "citation": run["citation"],
+            "targets": run["targets"],
+            "created_at": run["created_at"].isoformat(),
+        },
+        "share_of_voice": (run["metrics"] or {}).get("share_of_voice", []),
+        "questions": [dict(r) for r in results],
+    }
