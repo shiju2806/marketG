@@ -14,7 +14,7 @@ This document defines the concrete schemas across the platform's **polyglot pers
 
 | Store | Holds | Role |
 |-------|-------|------|
-| PostgreSQL | organizations, users, sources, jobs, entities, claims, evidence metadata, versions, conflicts, recommendations, scores | System of record + application data |
+| PostgreSQL | organizations, users, sources, jobs, entities, claims, evidence metadata, versions, conflicts, recommendations, scores, external AI probe runs/results | System of record + application data |
 | Object Storage | raw HTML, PDFs, crawl artifacts | Immutable evidence documents |
 | Vector DB (pgvector / Qdrant) | chunk embeddings | Semantic retrieval |
 | Neo4j | the Semantic Business Graph | Relationship traversal / reasoning |
@@ -235,6 +235,44 @@ Contradiction management (SBTS §15, KIPS §17).
 | expected_impact | TEXT | high / medium / low |
 | status | TEXT | open / applied / dismissed |
 | created_date | TIMESTAMPTZ | |
+
+### 3.15 probe_run
+
+An external AI probing job (HRRE §13). Results are **observations about the outside world**, stored separately from the twin — they never become twin facts.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| probe_run_id | UUID PK | |
+| organization_id | UUID FK | |
+| targets | TEXT[] | chatgpt / claude / perplexity |
+| question_count | INT | |
+| samples_per_question | INT | external answers are non-deterministic |
+| status | TEXT | queued / running / done / failed |
+| metrics | JSONB | total latency, tokens, cost |
+| created_date | TIMESTAMPTZ | |
+
+### 3.16 probe_result
+
+One row per question × model × sample.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| probe_result_id | UUID PK | |
+| probe_run_id | UUID FK → probe_run | |
+| organization_id | UUID FK | |
+| question | TEXT | |
+| model | TEXT | chatgpt / claude / perplexity |
+| sample | INT | sample index |
+| answer | TEXT | raw AI answer |
+| organization_mentioned | BOOL | |
+| organization_cited | BOOL | link/source to org |
+| competitor_mentions | TEXT[] | detected in answer (no competitor twin) |
+| claim_consistency | TEXT | consistent / inconsistent / unknown |
+| cited_sources | TEXT[] | URLs the assistant cited |
+| latency_ms | INT | |
+| tokens | INT | |
+| cost_usd | NUMERIC(10,4) | |
+| probed_at | TIMESTAMPTZ | point-in-time measurement |
 
 ---
 

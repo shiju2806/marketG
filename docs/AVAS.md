@@ -17,9 +17,9 @@ AI Visibility is the **first commercial application** built on the Semantic Busi
 - Can AI **reason** about us?
 - Can AI **cite** us?
 
-It delivers immediate value to product marketing and content teams by turning "how does AI see us?" from intuition into scored, explainable, evidence-backed metrics.
+It delivers immediate value to product marketing and content teams by turning "how does AI see us?" from intuition into scored, explainable, evidence-backed metrics. It is the flagship application of marketG's **GEO (Generative Engine Optimization)** positioning, with **B2B SaaS** as the beachhead vertical.
 
-AI Visibility is a **consumer of the twin**, not a parallel system. It talks only to the Reasoning, Recommendation, and Twin APIs — never directly to the graph.
+AI Visibility is a **consumer of the twin**, not a parallel system. It talks only to the Reasoning, Recommendation, Probe, and Twin APIs — never directly to the graph.
 
 ---
 
@@ -73,11 +73,16 @@ Questions are derived from the twin (products, capabilities, industries, competi
 
 ### 3.4 Run AI Simulations
 
-Each question is run through the Hybrid Retrieval & Reasoning Engine (HRRE) against the twin, simulating how an AI assistant would retrieve, reason, and answer using the organization's knowledge.
+Each question is measured **two ways** (HRRE §1 "Two engines"):
+
+1. **Internal Twin Simulation** — run through the Hybrid Retrieval & Reasoning Engine against the twin, showing how an AI *could* retrieve, reason, and answer from the organization's knowledge. Deterministic and fully explainable (the *why*).
+2. **External AI Probe** — the same question is sent to **real AI assistants (ChatGPT, Claude, Perplexity)**, and their actual answers are captured and analyzed: is the organization mentioned? cited? which competitors are named? do the statements match our twin's evidence? (HRRE §13 — the *reality*.)
+
+Per MVP decision #4, competitor handling is **mention/citation detection in real AI answers**, not full competitor twins.
 
 ### 3.5 Analyze Answers
 
-For every simulated answer the system evaluates the four visibility metrics (§4) and records the evidence, gaps, and contradictions that drove the result.
+For every question the system evaluates the four visibility metrics (§4) across both engines and records the evidence, gaps, contradictions, and real-AI answers (with competitor mentions) that drove the result.
 
 ### 3.6 Generate Recommendations
 
@@ -87,23 +92,23 @@ Evidence-backed recommendations are produced from the gaps and weaknesses found 
 
 ## 4. Metrics
 
-Four scores form the AI Visibility index. Each is 0–100, explainable, and traceable to evidence.
+Four scores form the AI Visibility index. Each is 0–100, explainable, and traceable to evidence. Each score declares which engine produces it — **Internal** (twin simulation, HRRE §3–12), **External** (live AI probe, HRRE §13), or **Both**.
 
-### 4.1 Retrieval Score — *Can AI find us?*
+### 4.1 Retrieval Score — *Can AI find us?* · **Internal + External**
 
-Measures whether the organization's knowledge is retrievable for relevant questions (hybrid retrieval recall). Low score → the twin lacks content or the content isn't indexed/connected for that intent.
+Internal: whether the organization's knowledge is retrievable for relevant questions (hybrid retrieval recall). External: whether real assistants surface the organization at all when asked those questions. Low score → the twin lacks content / isn't connected for that intent, and/or real AI doesn't find it.
 
-### 4.2 Citation Score — *Does AI mention us?*
+### 4.2 Citation Score — *Does AI mention us?* · **External (primary)**
 
-Measures how often the organization / product appears as a cited source in the simulated answers, versus competitors. Low score → competitors dominate the answer space for that topic.
+Measures how often the organization / product is mentioned or cited by **real AI assistants** (ChatGPT, Claude, Perplexity), versus how often competitors are named in the same answers. Low score → competitors dominate the real answer space for that topic. This is the score that most directly proves GEO impact.
 
-### 4.3 Reasoning Score — *Can AI answer complex questions about us?*
+### 4.3 Reasoning Score — *Can AI answer complex questions about us?* · **Internal (primary)**
 
-Measures the engine's ability to answer multi-hop questions (e.g. "does it support multinational payroll?") using graph-connected knowledge. Low score → relationships/coverage are missing (HRRE coverage reasoning).
+Measures the ability to answer multi-hop questions (e.g. "does it support multinational payroll?") using graph-connected knowledge. Low score → relationships/coverage are missing (HRRE coverage reasoning). Cross-checked against whether real AI can reason to the same conclusion.
 
-### 4.4 Trust Score — *Does evidence support claims?*
+### 4.4 Trust Score — *Does evidence support claims?* · **Both**
 
-Measures how well the organization's claims are backed by strong, fresh, non-contradictory evidence (SBTS confidence + contradiction management). Low score → unsupported claims, stale sources, or unresolved conflicts.
+Internal: how well the organization's claims are backed by strong, fresh, non-contradictory evidence (SBTS confidence + contradiction management). External: whether real AI's statements about the organization are *consistent* with that evidence. Low score → unsupported claims, stale sources, unresolved conflicts, or real AI asserting things our evidence doesn't support.
 
 **Overall AI Visibility Score** = weighted composite of the four, with the breakdown always shown.
 
@@ -131,7 +136,7 @@ AI Visibility App
    ↓
 Recommendation API
    ↓
-Reasoning API   (HRRE)
+Reasoning API (HRRE — internal)  +  Probe API (HRRE §13 — external LLMs)
    ↓
 Twin API
 ```
@@ -144,13 +149,14 @@ No application logic reaches into Neo4j / pgvector directly. This keeps the app 
 
 **Included:**
 
-- ✓ Single-website ingestion → twin build
-- ✓ Automated question generation from the twin + category intents
-- ✓ Retrieval simulation via HRRE
-- ✓ Four visibility scores with breakdowns
+- ✓ Single-website ingestion → twin build (website connector; pluggable for future sources)
+- ✓ Automated question generation from the twin + B2B SaaS category intents
+- ✓ Internal twin simulation via HRRE
+- ✓ External AI probing of ChatGPT, Claude, Perplexity (real answers captured + analyzed)
+- ✓ Competitor mention/citation detection from real AI answers (no full competitor twins)
+- ✓ Four visibility scores with breakdowns (each tagged Internal / External / Both)
 - ✓ Evidence-backed, ranked recommendations
-- ✓ Basic competitive comparison (presence + citation share)
-- ✓ Dashboard: scores, per-question detail, evidence, recommendations
+- ✓ Dashboard: scores, per-question detail, evidence, real-AI answers, recommendations
 
 **Excluded (per PRD MVP definition):**
 

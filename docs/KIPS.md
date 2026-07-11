@@ -114,6 +114,10 @@ Public Website → HTML Pages → Metadata → Assets
 
 Documentation Systems, PDF repositories, GitHub, Confluence, SharePoint, Salesforce, Zendesk, Product databases
 
+Beyond a customer's own systems, the platform will also ingest **industry-relevant external sources** (both open and paid) — e.g. review sites, directories, analyst reports, and curated datasets — tuned per vertical at sell time (first vertical: B2B SaaS).
+
+> **Design note:** the acquisition layer is a **pluggable connector abstraction**. Every connector conforms to the same `Connector → Raw Document` contract (§7 output), so new sources — internal or external, open or paid — are added without changing downstream stages. The MVP ships with the **website connector only**, but the interface is designed so industry sources drop in next.
+
 ---
 
 ## 6. Website Crawler Architecture

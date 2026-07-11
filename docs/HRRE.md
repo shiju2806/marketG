@@ -18,6 +18,13 @@ It answers the platform's central runtime question:
 
 The engine does not generate marketing copy or free-form answers. It produces **grounded, evidence-linked reasoning** that downstream applications (starting with AI Visibility) consume.
 
+**Two engines, two questions.** AI Visibility is measured by two complementary engines:
+
+1. **Internal Twin Simulation** — *this document (§3–§12)*. Deterministic hybrid retrieval + reasoning over **our own twin**. It answers *"what could AI conclude about this organization given its knowledge, and why?"* — fully explainable and evidence-linked.
+2. **External AI Probe** — *§13*. Calls **real AI assistants (ChatGPT, Claude, Perplexity)** with buyer questions and observes their actual answers. It answers *"what does AI actually say about this organization today, and which competitors does it name?"*
+
+The internal engine explains **why**; the external probe measures **reality**. Scores draw on both.
+
 ---
 
 ## 2. Design Principles
@@ -199,13 +206,72 @@ For the first release:
 - ✓ Evidence selection with provenance + confidence
 - ✓ Coverage, gap, and confidence reasoning
 - ✓ Competitive reasoning (basic — presence + claim comparison)
+- ✓ **External AI Probe** (§13): ChatGPT, Claude, Perplexity; org-mention, org-citation, competitor-mention detection, claim-consistency check
 
-**Excluded from MVP:** multi-hop reasoning beyond depth 2, learned reranker fine-tuning, real-time streaming reasoning.
+**Excluded from MVP:** multi-hop reasoning beyond depth 2, learned reranker fine-tuning, real-time streaming reasoning, full competitor twins (probe detects competitor mentions only), Google AI Overviews / Gemini probe targets.
 
 ---
 
-## 13. Key Architectural Decision
+## 13. External AI Probe (Live LLM Testing)
 
-Retrieval is hybrid **by necessity**, and reasoning is grounded **by mandate**.
+The Internal Twin Simulation (§3–§12) tells us what AI *could* conclude from our knowledge. The **External AI Probe** tells us what real AI assistants *actually* say today. Both feed AI Visibility.
 
-The engine's value is not that it produces answers — any LLM does that. Its value is that every answer is **retrievable, connected through the graph, evidence-backed, and confidence-scored**, which is precisely what makes AI Visibility measurable rather than anecdotal.
+### 13.1 Purpose
+
+Answer, empirically:
+
+- Does real AI **find** this organization when asked buyer questions? (retrieval reality)
+- Does real AI **cite / mention** it? (citation reality)
+- Which **competitors** does real AI name in the same answers? (competitive reality)
+- Are the AI's statements **consistent with** our twin's evidence-backed claims? (trust reality)
+
+### 13.2 Probe Targets (MVP)
+
+- **ChatGPT** (OpenAI API)
+- **Claude** (Anthropic API)
+- **Perplexity** (API — the most search/citation-oriented assistant)
+
+The probe layer is provider-pluggable; targets are added without changing the scoring logic. Google AI Overviews / Gemini are deferred (harder to access programmatically).
+
+### 13.3 Probe Flow
+
+```
+Buyer Question (from AVAS question generation)
+   ↓
+Fan out to each target: ChatGPT, Claude, Perplexity
+   ↓
+Capture raw answer + any cited sources
+   ↓
+Analyze answer:
+   - Is the organization mentioned?  (our-mention detection)
+   - Is the organization cited/linked? (citation detection)
+   - Which competitors are named?     (competitor-mention extraction)
+   - Do claims agree with our twin?    (consistency check vs. SBTS claims)
+   ↓
+Store probe_result (per question × per model)
+```
+
+### 13.4 Competitor Handling
+
+Per decision #4 of the MVP scope: the probe **detects and counts competitor mentions/citations** in real AI answers — it does **not** build full twins for competitors. This yields competitive signal (who dominates the answer space) cheaply. Full competitor twins are a post-MVP Competitive Intelligence feature.
+
+### 13.5 Cost, Rate Limits & Determinism
+
+External LLM calls are expensive, rate-limited, and **non-deterministic** (answers vary run to run). The probe therefore:
+
+- Runs asynchronously via the event/queue architecture (SAD §18, §21).
+- Records per-call latency, tokens, and cost (SAD §19 observability).
+- May sample each question multiple times and aggregate, since a single answer is not stable.
+- Timestamps every result — external AI answers are a point-in-time measurement, not a fixed fact.
+
+### 13.6 Relationship to the Twin
+
+The External AI Probe **reads** buyer questions derived from the twin and **checks** answers against the twin's claims, but its results are **observations about the outside world**, not knowledge about the organization. Probe results are stored separately (`probe_run` / `probe_result`, see Database Design) and never enter the twin as facts — they inform *scores and recommendations*, consistent with the "LLM proposes, twin decides" principle (KIPS §25).
+
+---
+
+## 14. Key Architectural Decision
+
+Retrieval is hybrid **by necessity**, reasoning is grounded **by mandate**, and measurement is **two-sided by design**.
+
+The engine's value is not that it produces answers — any LLM does that. Its value is that (a) every internal answer is **retrievable, connected through the graph, evidence-backed, and confidence-scored**, and (b) every external answer is **measured against that evidence** — which together make AI Visibility a *provable, explainable* metric rather than an anecdote.

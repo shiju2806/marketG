@@ -12,7 +12,7 @@
 
 This roadmap translates the architecture (SAD, SBTS, KIPS, HRRE, AVAS, API, DB) into an ordered, buildable implementation plan for the MVP.
 
-The MVP goal, per the PRD: **ingest a single website → build a Semantic Business Twin → run AI Visibility simulations → produce scores and evidence-backed recommendations.**
+The MVP goal, per the PRD: **ingest a single website → build a Semantic Business Twin → run AI Visibility via internal simulation *and* external probing of ChatGPT/Claude/Perplexity → produce scores (with competitor mentions) and evidence-backed recommendations.** GEO positioning; B2B SaaS beachhead.
 
 Each sprint delivers a working, demonstrable slice. The sequence is dependency-driven: storage before extraction, twin before reasoning, reasoning before the app.
 
@@ -70,18 +70,32 @@ Each sprint delivers a working, demonstrable slice. The sequence is dependency-d
 
 ---
 
-### Sprint 4 — AI Visibility
+### Sprint 4 — AI Visibility (Internal Engine)
 
-**Goal:** measure how AI sees the organization.
+**Goal:** measure what AI *could* conclude from the twin, explainably.
 
-- Query generation from the twin + category intents (AVAS §3.3).
-- Hybrid retrieval + reasoning engine: BM25 + vector → graph expansion → rerank → evidence selection → LLM reasoning (HRRE §3–9).
+- Query generation from the twin + B2B SaaS category intents (AVAS §3.3).
+- Hybrid retrieval + reasoning engine: BM25 + vector → graph expansion → rerank → evidence selection → LLM reasoning (HRRE §3–12).
 - Reasoning modes: coverage, gap, confidence, basic competitive (HRRE §10).
-- Retrieval simulation across generated questions.
-- Scoring: Retrieval, Citation, Reasoning, Trust + overall (AVAS §4).
-- Reasoning/App API: `POST /reason`, `GET /visibility-score`.
+- Internal simulation across generated questions.
+- Scoring (internal portion): Retrieval, Reasoning, Trust (AVAS §4).
+- Reasoning/App API: `POST /reason`, partial `GET /visibility-score`.
 
-**Exit criteria:** run simulations for a built twin and get the four scores with per-question evidence and gaps.
+**Exit criteria:** run internal simulations for a built twin and get the internally-sourced scores with per-question evidence and gaps.
+
+---
+
+### Sprint 4b — External AI Probe
+
+**Goal:** measure what real AI *actually* says today.
+
+- External probe layer: fan buyer questions out to **ChatGPT, Claude, Perplexity** (provider-pluggable), async via queue (HRRE §13).
+- Answer analysis: org-mention, org-citation, **competitor-mention detection** (no competitor twins), claim-consistency vs. the twin.
+- `probe_run` / `probe_result` persistence + observability (latency, tokens, cost).
+- Probe API: `POST /probe`, `GET /probe/{job_id}`.
+- Fold external signal into Citation (primary), Retrieval, and Trust scores; finalize overall `GET /visibility-score` (AVAS §4).
+
+**Exit criteria:** probe the three assistants for a built twin's questions and see real answers, competitor mentions, and the completed four-score index.
 
 ---
 
@@ -115,23 +129,28 @@ Sprint 2 (chunks + entities + indexes)
         ↓
 Sprint 3 (twin + governance)   ← the product core
         ↓
-Sprint 4 (retrieval + reasoning + scores)
+Sprint 4  (internal retrieval + reasoning + partial scores)
+        ↓
+Sprint 4b (external AI probe + competitor mentions + full scores)
         ↓
 Sprint 5 (dashboard + recommendations)
 ```
 
-Nothing in Sprint 4 can be trusted until Sprint 3's governance and evidence are in place — reasoning quality is bounded by twin quality.
+Nothing in Sprint 4 can be trusted until Sprint 3's governance and evidence are in place — reasoning quality is bounded by twin quality. Sprint 4b depends on Sprint 4's question generation but its external calls are independent, so it can run partly in parallel.
 
 ---
 
 ## 6. MVP Definition of Done
 
-- ✓ Single-website ingestion → governed twin → AI Visibility report, end-to-end.
+- ✓ Single-website ingestion (pluggable connector layer) → governed twin → AI Visibility report, end-to-end.
 - ✓ Entities: Company, Product, Feature, Technology, Integration, Industry, Competitor.
 - ✓ Relationships: provides, integrates_with, competes_with, solves, supports.
 - ✓ Claims: capability, integration, compliance.
-- ✓ Four visibility scores + evidence-backed recommendations.
+- ✓ Internal twin simulation **and** external probing of ChatGPT, Claude, Perplexity.
+- ✓ Competitor mention/citation detection from real AI answers (no competitor twins).
+- ✓ Four visibility scores (tagged Internal/External/Both) + evidence-backed recommendations.
 - ✓ Every fact traceable to evidence with multi-dimensional confidence.
+- ✓ GEO positioning, B2B SaaS beachhead.
 
 **Explicitly out of MVP** (per PRD §12): internal enterprise connectors, multi-language, automated content generation, workflow automation, enterprise governance features.
 
@@ -146,8 +165,8 @@ Mirrors the SAD's capability-based team structure so each team owns a coherent s
 | Knowledge Acquisition | 1 | Crawler, connectors, document ingestion |
 | Knowledge Intelligence | 2–3 | Chunking, extraction, ontology, governance |
 | Semantic Twin Platform | 1–3 | Storage, graph, versioning, Twin API |
-| Reasoning & Retrieval | 4 | Hybrid retrieval, reasoning, scoring |
-| Application | 4–5 | AI Visibility app, dashboard, recommendations |
+| Reasoning & Retrieval | 4, 4b | Hybrid retrieval, reasoning, external AI probe, scoring |
+| Application | 4b–5 | AI Visibility app, dashboard, recommendations |
 
 ---
 

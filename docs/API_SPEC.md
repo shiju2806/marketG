@@ -15,7 +15,8 @@ This document defines the external and internal HTTP interfaces of the platform.
 The API surface is organized into layers that mirror the architecture:
 
 - **Twin API** — read entities, claims, evidence, the semantic twin.
-- **Reasoning API** — run retrieval + reasoning over the twin (HRRE).
+- **Reasoning API** — run internal retrieval + reasoning over the twin (HRRE §3–12).
+- **Probe API** — probe real external AI assistants (ChatGPT, Claude, Perplexity) and read results (HRRE §13).
 - **Recommendation API** — evidence-backed improvement suggestions.
 - **Ingestion API** — organizations, sources, crawls.
 
@@ -48,7 +49,9 @@ The API surface is organized into layers that mirror the architecture:
 | GET | `/claims` | List claims |
 | GET | `/claims/{id}` | Get a claim (confidence, evidence, history) |
 | GET | `/evidence/{id}` | Get an evidence record |
-| POST | `/reason` | Run a reasoning query over the twin |
+| POST | `/reason` | Run an internal reasoning query over the twin |
+| POST | `/probe` | Probe external AI assistants with buyer questions |
+| GET | `/probe/{job_id}` | Get probe run status + results |
 | GET | `/visibility-score` | Get AI Visibility scores |
 | GET | `/recommendations` | Get evidence-backed recommendations |
 
@@ -249,6 +252,63 @@ Response `200`:
   "gaps": ["No evidence comparing pricing vs ADP"]
 }
 ```
+
+---
+
+## 6b. Probe API (External AI Testing)
+
+Probes real external assistants (ChatGPT, Claude, Perplexity) with buyer questions and analyzes their answers (HRRE §13). External calls are expensive and non-deterministic, so `/probe` is **async** and results are point-in-time.
+
+### POST /probe
+
+Request:
+
+```json
+{
+  "organization_id": "org_123",
+  "questions": ["What is the best payroll platform for multinational companies?"],
+  "targets": ["chatgpt", "claude", "perplexity"],
+  "samples_per_question": 3
+}
+```
+
+`questions` optional — if omitted, uses the org's generated question set (AVAS §3.3). `targets` defaults to all three.
+
+Response `202`:
+
+```json
+{ "job_id": "probe_abc", "status": "queued", "target_count": 3, "question_count": 1 }
+```
+
+### GET /probe/{job_id}
+
+Response `200`:
+
+```json
+{
+  "job_id": "probe_abc",
+  "status": "done",
+  "results": [
+    {
+      "question": "What is the best payroll platform for multinational companies?",
+      "model": "perplexity",
+      "sample": 1,
+      "answer": "Top options include Workday, ADP, and Acme Payroll ...",
+      "organization_mentioned": true,
+      "organization_cited": true,
+      "competitor_mentions": ["Workday", "ADP"],
+      "claim_consistency": "consistent",
+      "cited_sources": ["https://acmepayroll.com/global"],
+      "latency_ms": 4200,
+      "tokens": 812,
+      "cost_usd": 0.03,
+      "probed_at": "2026-07-11T00:00:00Z"
+    }
+  ]
+}
+```
+
+Per MVP decision #4, `competitor_mentions` are **detected from the answer**, not backed by competitor twins.
 
 ---
 

@@ -1,8 +1,10 @@
 # marketG — Enterprise Knowledge Intelligence Platform (EKIP)
 
-Building the world's most accurate machine-readable representation of organizational knowledge — a continuously evolving **Semantic Business Twin (SBT)** that AI systems can reliably retrieve, reason over, and cite.
+marketG is a **GEO (Generative Engine Optimization)** platform — the successor to SEO. Where SEO optimized web pages for search engines, GEO optimizes an organization's *knowledge* for AI assistants.
 
-The first commercial application is **AI Visibility**: measuring whether AI can retrieve, understand, reason about, and cite an organization.
+We build the world's most accurate machine-readable representation of organizational knowledge — a continuously evolving **Semantic Business Twin (SBT)** that AI systems can reliably retrieve, reason over, and cite.
+
+The first commercial application is **AI Visibility**: measuring whether AI can retrieve, understand, reason about, and cite an organization — both by simulating our own twin *and* by probing real AI assistants (ChatGPT, Claude, Perplexity). Beachhead vertical: **B2B SaaS**.
 
 ## Documentation
 

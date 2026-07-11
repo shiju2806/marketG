@@ -87,6 +87,12 @@ Its purpose is to answer:
 
 This delivers immediate value to marketing and product teams.
 
+**Category positioning:** marketG is a **GEO (Generative Engine Optimization)** platform — the successor to SEO. Where SEO optimized web pages for search engines, GEO optimizes an organization's *knowledge* for AI assistants. Clients adopt marketG in place of traditional SEO platforms.
+
+**Beachhead vertical:** the first target market is **B2B SaaS**. These buyers already compare tools via AI assistants; their sites carry the structured content the pipeline expects (pricing, security, integrations, case studies); and their compliance and integration claims are central, high-stakes, and directly comparable.
+
+**How AI Visibility is measured:** two complementary engines — (1) *internal twin simulation* (deterministic retrieval + reasoning over our own twin, which explains **why** a score is what it is), and (2) *external AI probing* (calling real assistants — ChatGPT, Claude, Perplexity — with buyer questions to measure what AI **actually** says today, including which competitors it names).
+
 ### Platform Strategy
 
 The AI Visibility application is intentionally built on top of a reusable **Semantic Business Twin**.
@@ -260,13 +266,15 @@ Customers gain:
 
 **The MVP includes:**
 
-- Website ingestion.
+- Website ingestion (pluggable connector layer; website only in v1).
 - Semantic chunking.
 - Knowledge extraction.
 - Semantic Business Graph construction.
-- Hybrid retrieval simulation.
-- AI Visibility scoring.
+- Hybrid retrieval simulation (internal twin engine).
+- External AI probing of ChatGPT, Claude, and Perplexity (real-answer measurement + competitor-mention detection).
+- AI Visibility scoring (Retrieval, Citation, Reasoning, Trust).
 - Evidence-backed recommendations.
+- Beachhead: B2B SaaS.
 
 **The MVP intentionally excludes:**
 
