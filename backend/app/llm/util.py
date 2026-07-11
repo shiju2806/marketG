@@ -56,6 +56,21 @@ def parse_knowledge_json(raw: str) -> KnowledgeExtraction:
     return KnowledgeExtraction(entities=entities, relationships=relationships, claims=claims)
 
 
+def parse_brands_json(raw: str) -> list[str]:
+    """Parse {"brands": ["Tesla", ...]} -> deduped, cleaned brand names."""
+    obj = _extract_object(raw)
+    items = obj.get("brands") if isinstance(obj, dict) else None
+    if not isinstance(items, list):
+        return []
+    seen, out = set(), []
+    for b in items:
+        name = str(b).strip()
+        if name and name.lower() not in seen:
+            seen.add(name.lower())
+            out.append(name)
+    return out
+
+
 def _extract_object(raw: str):
     raw = raw.strip()
     start, end = raw.find("{"), raw.rfind("}")

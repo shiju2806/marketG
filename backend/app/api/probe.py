@@ -51,6 +51,7 @@ async def latest_probe(organization_id: UUID = Query(...), account_id: UUID = De
         "run": {
             "probe_run_id": str(run["probe_run_id"]),
             "citation": run["citation"],
+            "earned_owned": float(run["earned_owned"]) if run["earned_owned"] is not None else None,
             "targets": run["targets"],
             "created_at": run["created_at"].isoformat(),
         },

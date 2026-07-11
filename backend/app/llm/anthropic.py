@@ -10,8 +10,13 @@ import httpx
 
 from app.config import settings
 from app.llm.base import TokenUsage
-from app.llm.util import parse_entities_json, parse_knowledge_json
+from app.llm.util import parse_brands_json, parse_entities_json, parse_knowledge_json
 from app.verticals.base import VerticalPack
+
+_BRANDS_SYSTEM = (
+    "Extract every company or product BRAND name mentioned in the text. Return ONLY "
+    'JSON {"brands": ["..."]}, deduplicated, real names only. No prose.'
+)
 
 # Claude Sonnet pricing (approx, per 1M tokens).
 _IN_PER_1M = 3.0
@@ -80,6 +85,13 @@ class AnthropicLLMProvider:
         data = await self._message(_KNOWLEDGE_SYSTEM, prompt)
         raw = "".join(block.get("text", "") for block in data.get("content", []))
         return parse_knowledge_json(raw), self._usage(data)
+
+    async def extract_brands(self, text: str) -> tuple[list[str], TokenUsage]:
+        if not settings.anthropic_api_key:
+            raise RuntimeError("ANTHROPIC_API_KEY not set")
+        data = await self._message(_BRANDS_SYSTEM, text)
+        raw = "".join(b.get("text", "") for b in data.get("content", []))
+        return parse_brands_json(raw), self._usage(data)
 
     async def _message(self, system: str, prompt: str) -> dict:
         async with httpx.AsyncClient() as client:

@@ -9,8 +9,18 @@ import httpx
 
 from app.config import settings
 from app.llm.base import TokenUsage
-from app.llm.util import parse_entities_json, parse_knowledge_json
+from app.llm.util import parse_brands_json, parse_entities_json, parse_knowledge_json
 from app.verticals.base import VerticalPack
+
+_BRANDS_SYSTEM = (
+    "Extract every company or product BRAND name mentioned in the text (e.g. car "
+    "makers, product lines). Respond with JSON {\"brands\": [\"...\"]}. Only real "
+    "brand/company names, deduplicated. No prose."
+)
+
+
+def _parse_brands(raw: str) -> list[str]:
+    return parse_brands_json(raw)
 
 # text-embedding-3-small: ~$0.02 / 1M tokens.
 _PRICE_PER_1M = 0.02
@@ -121,6 +131,27 @@ class OpenAILLMProvider:
             data = resp.json()
         knowledge = parse_knowledge_json(data["choices"][0]["message"]["content"])
         return knowledge, self._usage(data)
+
+    async def extract_brands(self, text: str) -> tuple[list[str], TokenUsage]:
+        if not settings.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY not set")
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                json={
+                    "model": self.model,
+                    "response_format": {"type": "json_object"},
+                    "messages": [
+                        {"role": "system", "content": _BRANDS_SYSTEM},
+                        {"role": "user", "content": text},
+                    ],
+                },
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        return _parse_brands(data["choices"][0]["message"]["content"]), self._usage(data)
 
     @staticmethod
     def _usage(data: dict) -> TokenUsage:

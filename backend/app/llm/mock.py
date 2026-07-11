@@ -125,3 +125,13 @@ class MockLLMProvider:
             )
 
         return KnowledgeExtraction(entities, relationships, claims), usage
+
+    async def extract_brands(self, text: str) -> tuple[list[str], TokenUsage]:
+        # Heuristic: multi-word proper nouns as candidate brand names (deterministic).
+        seen, brands = set(), []
+        for m in _PROPER.findall(text):
+            m = m.strip()
+            if len(m) >= 3 and not m.isupper() and m.lower() not in seen:
+                seen.add(m.lower())
+                brands.append(m)
+        return brands, TokenUsage(tokens=_est_tokens(text))

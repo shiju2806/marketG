@@ -70,3 +70,6 @@ class LLMProvider(Protocol):
         self, text: str, pack: VerticalPack
     ) -> tuple[KnowledgeExtraction, TokenUsage]:
         ...
+
+    async def extract_brands(self, text: str) -> tuple[list[str], TokenUsage]:
+        ...

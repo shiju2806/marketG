@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     perplexity_api_key: str = ""
     openai_embed_model: str = "text-embedding-3-small"
     openai_llm_model: str = "gpt-4o-mini"
+    openai_probe_model: str = "gpt-4o-mini"  # browsing probe via Responses API web_search
     anthropic_model: str = "claude-sonnet-5"
     perplexity_model: str = "sonar"
 

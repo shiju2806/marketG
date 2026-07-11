@@ -61,7 +61,13 @@ export interface ProbeQuestion {
 }
 
 export interface ProbeReport {
-  run: { probe_run_id: string; citation: number | null; targets: string[]; created_at: string } | null;
+  run: {
+    probe_run_id: string;
+    citation: number | null;
+    earned_owned: number | null;
+    targets: string[];
+    created_at: string;
+  } | null;
   share_of_voice: ShareOfVoice[];
   questions: ProbeQuestion[];
 }

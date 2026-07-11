@@ -169,6 +169,15 @@ export default function App() {
                     </>
                   )}.
                 </p>
+                {probe?.run && probe.run.earned_owned !== null && (
+                  <p className="mt-2 text-sm text-ink-soft">
+                    Of the sources AI cited,{" "}
+                    <span className={probe.run.earned_owned > 0 ? "text-good" : "text-crit"}>
+                      {Math.round(probe.run.earned_owned * 100)}% are your own site
+                    </span>{" "}
+                    — the rest is third-party. {probe.run.earned_owned === 0 && "Your AI presence is entirely borrowed."}
+                  </p>
+                )}
                 <div className="mt-6">
                   <h3 className="mb-3 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
                     Share of voice in AI answers

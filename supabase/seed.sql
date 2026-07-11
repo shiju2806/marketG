@@ -9,14 +9,4 @@ insert into app_user (account_id, email, role)
 values ('00000000-0000-0000-0000-000000000001', 'demo@marketg.dev', 'owner')
 on conflict (account_id, email) do nothing;
 
--- Owned brand under the demo account (automotive vertical pack).
-insert into organization (organization_id, account_id, name, website, org_role, vertical_pack_id)
-values (
-    '00000000-0000-0000-0000-0000000000a1',
-    '00000000-0000-0000-0000-000000000001',
-    'Rivian',
-    'https://www.rivian.com',
-    'owned_brand',
-    'automotive'
-)
-on conflict (organization_id) do nothing;
+-- No seeded organizations: users create them via the "Analyze a website" flow.

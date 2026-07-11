@@ -10,9 +10,9 @@ from collections import Counter
 from statistics import mean
 
 from app.config import settings
+from app.llm.factory import get_llm_provider
 from app.probe.analysis import analyze_answer
 from app.probe.factory import available_targets
-from app.verticals.registry import get_vertical_pack
 from app.visibility.questions import generate_category_questions
 from app.visibility.scoring import to_score
 
@@ -25,9 +25,8 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
     )
     org_name = org["name"] if org else ""
     org_names = [org_name] if org_name else []
-    pack = get_vertical_pack(org["vertical_pack_id"] if org else "automotive")
-    # Auto-detect competitors: the vertical's brand universe, minus the org itself.
-    competitors = [b for b in pack.competitor_brands if b.lower() != org_name.lower()]
+    # Competitors are DISCOVERED per answer by an LLM (no hardcoded brand list).
+    llm = get_llm_provider()
     targets = available_targets(requested_targets)
     # D-07: probe UNBRANDED category questions so mentions are unprompted.
     questions = await generate_category_questions(pool, organization_id)
@@ -58,9 +57,17 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
                                         target.name, sample, str(exc))
                     continue
                 latency_ms = int((time.perf_counter() - started) * 1000)
+                # Discover brands named in THIS answer (dynamic, not a fixed list).
+                try:
+                    brands, brand_usage = await llm.extract_brands(ans.text)
+                    total_cost += brand_usage.cost_usd
+                    # Drop the org itself and its own products (they aren't competitors).
+                    brands = [b for b in brands if org_name.lower() not in b.lower()]
+                except Exception:  # noqa: BLE001 - brand extraction is best-effort
+                    brands = []
                 a = analyze_answer(
                     ans.text, ans.cited_sources,
-                    org_names=org_names, competitor_names=competitors, org_website=org["website"],
+                    org_names=org_names, competitor_names=brands, org_website=org["website"],
                 )
                 mention_flags.append(1.0 if a["organization_mentioned"] else 0.0)
                 if a["organization_mentioned"]:

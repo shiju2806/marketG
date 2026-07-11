@@ -14,31 +14,60 @@ _SYSTEM = "Answer the user's question concisely, as a helpful assistant would."
 
 
 class ChatGPTProbe:
+    """ChatGPT with live web search (OpenAI Responses API + web_search tool).
+
+    This BROWSES — it answers from the current web, not just training data, which
+    is what an end user experiences in the ChatGPT app.
+    """
+
     name = "chatgpt"
 
     async def ask(self, question: str) -> ProbeAnswer:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                "https://api.openai.com/v1/chat/completions",
+                "https://api.openai.com/v1/responses",
                 headers={"Authorization": f"Bearer {settings.openai_api_key}"},
                 json={
-                    "model": settings.openai_llm_model,
-                    "messages": [
-                        {"role": "system", "content": _SYSTEM},
-                        {"role": "user", "content": question},
-                    ],
+                    "model": settings.openai_probe_model,
+                    "tools": [{"type": "web_search_preview"}],
+                    "input": question,
                 },
-                timeout=60.0,
+                timeout=90.0,
             )
             resp.raise_for_status()
             data = resp.json()
-        text = data["choices"][0]["message"]["content"]
+
+        text, citations = _parse_responses(data)
         u = data.get("usage", {})
         cost = round(
-            u.get("prompt_tokens", 0) / 1_000_000 * 0.15
-            + u.get("completion_tokens", 0) / 1_000_000 * 0.60, 6
+            u.get("input_tokens", 0) / 1_000_000 * 0.15
+            + u.get("output_tokens", 0) / 1_000_000 * 0.60, 6
         )
-        return ProbeAnswer(text=text, tokens=u.get("total_tokens", 0), cost_usd=cost)
+        return ProbeAnswer(
+            text=text, cited_sources=citations, tokens=u.get("total_tokens", 0), cost_usd=cost
+        )
+
+
+def _parse_responses(data: dict) -> tuple[str, list[str]]:
+    """Extract answer text + cited URLs from an OpenAI Responses API result."""
+    text = data.get("output_text") or ""
+    citations: list[str] = []
+    for item in data.get("output", []):
+        if item.get("type") != "message":
+            continue
+        for block in item.get("content", []):
+            if not text and block.get("type") == "output_text":
+                text = block.get("text", "")
+            for ann in block.get("annotations", []):
+                if ann.get("type") == "url_citation" and ann.get("url"):
+                    citations.append(ann["url"])
+    # de-dup, preserve order
+    seen, unique = set(), []
+    for c in citations:
+        if c not in seen:
+            seen.add(c)
+            unique.append(c)
+    return text, unique
 
 
 class ClaudeProbe:
