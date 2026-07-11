@@ -11,7 +11,7 @@ from statistics import mean
 from app.config import settings
 from app.probe.analysis import analyze_answer
 from app.probe.factory import available_targets
-from app.visibility.questions import generate_questions
+from app.visibility.questions import generate_category_questions
 from app.visibility.scoring import to_score
 
 
@@ -30,7 +30,8 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
         )
     ]
     targets = available_targets(requested_targets)
-    questions = await generate_questions(pool, organization_id)
+    # D-07: probe UNBRANDED category questions so mentions are unprompted.
+    questions = await generate_category_questions(pool, organization_id)
 
     probe_run_id = await pool.fetchval(
         """

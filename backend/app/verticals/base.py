@@ -23,5 +23,9 @@ class VerticalPack:
     chunk_type_hints: dict[str, str] = field(default_factory=dict)
     # A natural-language instruction fragment injected into the extraction prompt.
     extraction_hint: str = ""
-    # Buyer-question templates (AVAS §3.3). Placeholders: {vehicle} {competitor} {brand}.
+    # Branded buyer-question templates (AVAS §3.3). Placeholders: {vehicle} {competitor} {brand}.
+    # Used by the INTERNAL engine (can our twin answer about our own products?).
     question_templates: tuple[tuple[str, str], ...] = ()
+    # Category / UNBRANDED questions for the external probe (D-07): measure whether
+    # AI names the brand *unprompted* vs competitors. No brand/vehicle placeholders.
+    category_questions: tuple[str, ...] = ()

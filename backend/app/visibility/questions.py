@@ -56,3 +56,16 @@ async def generate_questions(pool, organization_id, limit: int = 12) -> list[Que
                          target_entity_id=None)
             )
     return questions[:limit]
+
+
+async def generate_category_questions(pool, organization_id, limit: int = 8) -> list[Question]:
+    """Unbranded category questions for the external probe (D-07).
+
+    These never name the brand, so a mention is *unprompted* — the real Citation
+    signal (does AI recommend us for the category vs competitors?).
+    """
+    org = await pool.fetchrow(
+        "select vertical_pack_id from organization where organization_id=$1", organization_id
+    )
+    pack = get_vertical_pack(org["vertical_pack_id"] if org else "automotive")
+    return [Question(text=t, intent="citation", target_entity_id=None) for t in pack.category_questions][:limit]

@@ -64,4 +64,12 @@ AUTOMOTIVE = VerticalPack(
         ("Is the {vehicle} a good alternative to the {competitor}?", "comparison"),
         ("What vehicles does {brand} make?", "coverage"),
     ),
+    category_questions=(
+        "What is the best electric SUV in 2026?",
+        "What is the best electric SUV for towing?",
+        "What is the best electric pickup truck in 2026?",
+        "Which electric vehicle has the longest driving range?",
+        "What is the best luxury electric SUV?",
+        "What is the best electric vehicle for off-road and adventure?",
+    ),
 )
