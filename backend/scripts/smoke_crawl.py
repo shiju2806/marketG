@@ -19,6 +19,7 @@ from app.db import close_pool, get_pool
 from app.jobs import queue
 from app.jobs.worker import handle_crawl, handle_extract
 from app.storage import ensure_bucket
+from app.visibility.engine import run_visibility
 
 DEMO_ACCOUNT = UUID("00000000-0000-0000-0000-000000000001")
 DEMO_ORG = UUID("00000000-0000-0000-0000-0000000000a1")
@@ -161,6 +162,23 @@ async def main(seed_url: str) -> int:
         )
         for r in sample_rels:
             print(f"  rel   [{r['confidence']}] {r['subj']} —{r['predicate']}→ {r['obj']}")
+
+        # Sprint 4: AI Visibility internal engine.
+        vis = await run_visibility(pool, DEMO_ACCOUNT, DEMO_ORG)
+        s = vis["scores"]
+        print(f"\n=== AI VISIBILITY (run {vis['run_id'][:8]}, {s['question_count']} questions) ===")
+        print(f"  Retrieval           {s['retrieval']}")
+        print(f"  Reasoning           {s['reasoning']}")
+        print(f"  Trust               {s['trust']}")
+        print(f"  Machine-readability {s['machine_readability']}")
+        print(f"  ── Overall          {s['overall']}   (Citation: external, Sprint 4b)")
+        top_q = await pool.fetch(
+            "select question, retrieval, reasoning, trust from visibility_question "
+            "where run_id=$1 order by retrieval desc limit 5",
+            vis["run_id"],
+        )
+        for q in top_q:
+            print(f"    · R={q['retrieval']} Re={q['reasoning']} T={q['trust']}  {q['question']}")
 
         # A hybrid-retrieval sanity check: FTS finds a spec chunk.
         fts_hit = await pool.fetchval(

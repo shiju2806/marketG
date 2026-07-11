@@ -23,3 +23,5 @@ class VerticalPack:
     chunk_type_hints: dict[str, str] = field(default_factory=dict)
     # A natural-language instruction fragment injected into the extraction prompt.
     extraction_hint: str = ""
+    # Buyer-question templates (AVAS §3.3). Placeholders: {vehicle} {competitor} {brand}.
+    question_templates: tuple[tuple[str, str], ...] = ()

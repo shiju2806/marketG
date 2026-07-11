@@ -56,4 +56,12 @@ AUTOMOTIVE = VerticalPack(
         "specs (range, horsepower, towing, price), technologies, integrations, "
         "safety awards, and named competitors."
     ),
+    question_templates=(
+        ("What is the range of the {vehicle}?", "spec"),
+        ("How much does the {vehicle} cost?", "pricing"),
+        ("Is the {vehicle} good for towing?", "spec"),
+        ("What technology does the {vehicle} have?", "capability"),
+        ("Is the {vehicle} a good alternative to the {competitor}?", "comparison"),
+        ("What vehicles does {brand} make?", "coverage"),
+    ),
 )
