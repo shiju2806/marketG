@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     chunk_max_chars: int = 2400           # split a section beyond this
     chunk_min_chars: int = 60             # drop trivial fragments
     extract_max_chars_per_chunk: int = 6000  # truncate LLM input per chunk
+    extract_concurrency: int = 8          # parallel knowledge-extraction LLM calls
+    probe_concurrency: int = 6            # parallel external-probe + brand-extract calls
 
 
 settings = Settings()

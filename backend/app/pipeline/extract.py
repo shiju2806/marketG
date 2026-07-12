@@ -9,6 +9,8 @@ writer decide what enters the twin, with evidence and versioning.
 """
 from __future__ import annotations
 
+import asyncio
+
 import asyncpg
 
 from app.config import settings
@@ -50,6 +52,21 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
     vectors, embed_usage = await embedder.embed([c.text for c in chunks])
     usage = usage + embed_usage
 
+    # Extract knowledge from all chunks CONCURRENTLY (bounded) — these independent LLM
+    # calls were the main bottleneck when run sequentially. DB writes stay ordered below.
+    sem = asyncio.Semaphore(settings.extract_concurrency)
+
+    async def _extract(chunk):
+        text_in = f"{chunk.heading}. {chunk.text}"[: settings.extract_max_chars_per_chunk]
+        async with sem:
+            return await llm.extract_knowledge(text_in, pack)
+
+    knowledge_results = await asyncio.gather(*[_extract(c) for c in chunks])
+    knowledges = []
+    for kn, k_usage in knowledge_results:
+        knowledges.append(kn)
+        usage = usage + k_usage
+
     counters = {"chunks": len(chunks), "entities": 0, "relationships": 0, "claims": 0, "conflicts": 0}
 
     async with pool.acquire() as conn:
@@ -88,7 +105,7 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
                 counters["entities"] += 1
                 return entity_id
 
-            for chunk, vector in zip(chunks, vectors):
+            for chunk, vector, knowledge in zip(chunks, vectors, knowledges):
                 chunk_id = await conn.fetchval(
                     """
                     insert into chunk (account_id, organization_id, document_id, chunk_index,
@@ -99,10 +116,6 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
                     chunk.index, chunk.chunk_type, chunk.heading, chunk.text,
                     chunk.token_estimate, _vector_literal(vector),
                 )
-
-                text_in = f"{chunk.heading}. {chunk.text}"[: settings.extract_max_chars_per_chunk]
-                knowledge, k_usage = await llm.extract_knowledge(text_in, pack)
-                usage = usage + k_usage
 
                 evidence_id = await writer.write_evidence(
                     conn, document["account_id"], document["organization_id"],

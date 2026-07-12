@@ -5,6 +5,7 @@ fold the Citation score + earned-vs-owned back onto the org's latest visibility 
 """
 from __future__ import annotations
 
+import asyncio
 import time
 from collections import Counter
 from statistics import mean
@@ -46,51 +47,60 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
     you_mentions = 0
     brand_counts: Counter[str] = Counter()
 
-    for q in questions:
-        for target in targets:
-            for sample in range(1, samples + 1):
-                started = time.perf_counter()
-                try:
-                    ans = await target.ask(q.text)
-                except Exception as exc:  # noqa: BLE001 - record the failure, keep going
-                    await _record_error(pool, probe_run_id, account_id, organization_id, q.text,
-                                        target.name, sample, str(exc))
-                    continue
-                latency_ms = int((time.perf_counter() - started) * 1000)
-                # Discover brands named in THIS answer (dynamic, not a fixed list).
-                try:
-                    brands, brand_usage = await llm.extract_brands(ans.text)
-                    total_cost += brand_usage.cost_usd
-                    # Drop the org itself and its own products (they aren't competitors).
-                    brands = [b for b in brands if org_name.lower() not in b.lower()]
-                except Exception:  # noqa: BLE001 - brand extraction is best-effort
-                    brands = []
-                a = analyze_answer(
-                    ans.text, ans.cited_sources,
-                    org_names=org_names, competitor_names=brands, org_website=org["website"],
-                )
-                mention_flags.append(1.0 if a["organization_mentioned"] else 0.0)
-                if a["organization_mentioned"]:
-                    you_mentions += 1
-                for brand in a["competitor_mentions"]:
-                    brand_counts[brand] += 1
-                first_total += a["first_party"]
-                third_total += a["third_party"]
-                total_cost += ans.cost_usd
+    # Run every (question × target × sample) probe CONCURRENTLY (bounded). Each probe
+    # is a slow browsing call + a brand-extraction call — sequentially this dominated
+    # the runtime.
+    sem = asyncio.Semaphore(settings.probe_concurrency)
 
-                await pool.execute(
-                    """
-                    insert into probe_result (probe_run_id, account_id, organization_id, question,
-                        model, sample, answer, organization_mentioned, organization_cited,
-                        competitor_mentions, claim_consistency, cited_sources, first_party,
-                        third_party, latency_ms, tokens, cost_usd)
-                    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,$16,$17)
-                    """,
-                    probe_run_id, account_id, organization_id, q.text, target.name, sample,
-                    ans.text[:4000], a["organization_mentioned"], a["organization_cited"],
-                    a["competitor_mentions"], a["claim_consistency"], ans.cited_sources,
-                    a["first_party"], a["third_party"], latency_ms, ans.tokens, round(ans.cost_usd, 4),
-                )
+    async def _probe(q, target, sample) -> dict | None:
+        started = time.perf_counter()
+        async with sem:
+            try:
+                ans = await target.ask(q.text)
+            except Exception as exc:  # noqa: BLE001 - record the failure, keep going
+                await _record_error(pool, probe_run_id, account_id, organization_id, q.text,
+                                    target.name, sample, str(exc))
+                return None
+            try:
+                brands, brand_usage = await llm.extract_brands(ans.text)
+                brands = [b for b in brands if org_name.lower() not in b.lower()]
+            except Exception:  # noqa: BLE001 - brand extraction is best-effort
+                brands, brand_usage = [], None
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        a = analyze_answer(ans.text, ans.cited_sources, org_names=org_names,
+                           competitor_names=brands, org_website=org["website"])
+        return {"q": q, "model": target.name, "sample": sample, "ans": ans, "a": a,
+                "brand_cost": brand_usage.cost_usd if brand_usage else 0.0, "latency": latency_ms}
+
+    tasks = [
+        _probe(q, target, sample)
+        for q in questions for target in targets for sample in range(1, samples + 1)
+    ]
+    results = [r for r in await asyncio.gather(*tasks) if r is not None]
+
+    for r in results:
+        a, ans = r["a"], r["ans"]
+        mention_flags.append(1.0 if a["organization_mentioned"] else 0.0)
+        if a["organization_mentioned"]:
+            you_mentions += 1
+        for brand in a["competitor_mentions"]:
+            brand_counts[brand] += 1
+        first_total += a["first_party"]
+        third_total += a["third_party"]
+        total_cost += ans.cost_usd + r["brand_cost"]
+        await pool.execute(
+            """
+            insert into probe_result (probe_run_id, account_id, organization_id, question,
+                model, sample, answer, organization_mentioned, organization_cited,
+                competitor_mentions, claim_consistency, cited_sources, first_party,
+                third_party, latency_ms, tokens, cost_usd)
+            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,$16,$17)
+            """,
+            probe_run_id, account_id, organization_id, r["q"].text, r["model"], r["sample"],
+            ans.text[:4000], a["organization_mentioned"], a["organization_cited"],
+            a["competitor_mentions"], a["claim_consistency"], ans.cited_sources,
+            a["first_party"], a["third_party"], r["latency"], ans.tokens, round(ans.cost_usd, 4),
+        )
 
     total_results = len(mention_flags)
     citation_signal = mean(mention_flags) if mention_flags else 0.0
