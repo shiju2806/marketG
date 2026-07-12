@@ -1,55 +1,73 @@
 import { useState } from "react";
 import type { ProbeQuestion } from "../api";
 
-export function QuestionList({ items, you }: { items: ProbeQuestion[]; you: string }) {
-  if (items.length === 0) {
-    return <p className="text-sm text-ink-faint">No AI answers yet — run the analysis.</p>;
+// Group the per-model rows by question so each question shows once.
+interface Grouped {
+  question: string;
+  mentioned: boolean;
+  byModel: ProbeQuestion[];
+  competitors: string[];
+}
+
+function group(items: ProbeQuestion[]): Grouped[] {
+  const map = new Map<string, Grouped>();
+  for (const it of items) {
+    const g = map.get(it.question) ?? {
+      question: it.question, mentioned: false, byModel: [], competitors: [],
+    };
+    g.byModel.push(it);
+    g.mentioned = g.mentioned || it.organization_mentioned;
+    for (const c of it.competitor_mentions) if (!g.competitors.includes(c)) g.competitors.push(c);
+    map.set(it.question, g);
   }
+  return [...map.values()];
+}
+
+export function QuestionList({ items, you }: { items: ProbeQuestion[]; you: string }) {
+  const grouped = group(items);
+  if (grouped.length === 0) return <p className="text-sm text-ink-faint">No answers yet.</p>;
   return (
-    <div className="flex flex-col gap-3">
-      {items.map((q, i) => (
-        <QuestionCard key={i} q={q} you={you} />
-      ))}
+    <div className="flex flex-col gap-2.5">
+      {grouped.map((g, i) => <QuestionRow key={i} g={g} you={you} />)}
     </div>
   );
 }
 
-function QuestionCard({ q, you }: { q: ProbeQuestion; you: string }) {
+function QuestionRow({ g, you }: { g: Grouped; you: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <span className="font-mono text-[10px] uppercase tracking-wide text-ink-faint">{q.model}</span>
-          <h4 className="mt-0.5 font-medium text-ink">{q.question}</h4>
-        </div>
+    <div className="rounded-xl border border-line">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
         <span
           className={`shrink-0 rounded-md px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${
-            q.organization_mentioned ? "bg-good/15 text-good" : "bg-crit/15 text-crit"
+            g.mentioned ? "bg-good-soft text-good" : "bg-crit-soft text-crit"
           }`}
         >
-          {q.organization_mentioned ? `names ${you}` : `no ${you}`}
+          {g.mentioned ? "appears" : "absent"}
         </span>
-      </div>
-
-      {q.competitor_mentions.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-ink-faint">AI named:</span>
-          {q.competitor_mentions.map((c) => (
-            <span key={c} className="rounded bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-ink-soft">
-              {c}
-            </span>
+        <span className="flex-1 text-sm text-ink">{g.question}</span>
+        {g.competitors.length > 0 && (
+          <span className="hidden shrink-0 text-xs text-ink-faint sm:inline">
+            {g.competitors.slice(0, 3).join(", ")}
+            {g.competitors.length > 3 && ` +${g.competitors.length - 3}`}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="border-t border-line px-4 py-3">
+          <div className="mb-2 text-xs text-ink-faint">
+            Named: {g.competitors.join(", ") || "—"}
+          </div>
+          {g.byModel.map((m, j) => (
+            <div key={j} className="mb-3 last:mb-0">
+              <div className="font-mono text-[10px] uppercase tracking-wide text-ink-faint">
+                {m.model} · {m.organization_mentioned ? `names ${you}` : `no ${you}`}
+              </div>
+              <p className="mt-1 text-sm text-ink-soft">{m.answer}</p>
+            </div>
           ))}
         </div>
       )}
-
-      <button
-        onClick={() => setOpen(!open)}
-        className="mt-2 font-mono text-[11px] text-accent hover:underline"
-      >
-        {open ? "hide" : "show"} AI answer
-      </button>
-      {open && <p className="mt-2 border-t border-line pt-2 text-sm text-ink-soft">{q.answer}</p>}
     </div>
   );
 }

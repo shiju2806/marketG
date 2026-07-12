@@ -18,9 +18,14 @@ from app.llm.util import (
 from app.verticals.base import VerticalPack
 
 _BRANDS_SYSTEM = (
-    "Extract every company or product BRAND name mentioned in the text (e.g. car "
-    "makers, product lines). Respond with JSON {\"brands\": [\"...\"]}. Only real "
-    "brand/company names, deduplicated. No prose."
+    "List the vehicle MANUFACTURER BRANDS mentioned in the text — the parent marque "
+    "only. Map every model, trim, or package to its manufacturer: 'Silverado ZR2' -> "
+    "'Chevrolet', 'F-150 Raptor' -> 'Ford', 'Tacoma' -> 'Toyota', 'Model Y' -> "
+    "'Tesla', 'Escalade' -> 'Cadillac'. EXCLUDE model names, trims, engines, "
+    "components, features (e.g. 'Terrain Management System'), publications (e.g. 'Car "
+    "and Driver'), and websites. Normalize variants: 'Chevy'->'Chevrolet', "
+    "'RAM'->'Ram', 'Mercedes'->'Mercedes-Benz', 'VW'->'Volkswagen'. "
+    'Respond with JSON {"brands": ["..."]} — unique manufacturer brands only. No prose.'
 )
 
 _QUESTIONS_SYSTEM = (

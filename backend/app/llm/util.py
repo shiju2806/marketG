@@ -65,8 +65,24 @@ def parse_questions_json(raw: str) -> list[str]:
     return [str(q).strip() for q in items if str(q).strip()]
 
 
+# Common brand-variant normalization (belt-and-suspenders; the LLM does most of it).
+_BRAND_ALIASES = {
+    "chevy": "Chevrolet",
+    "chevrolet": "Chevrolet",
+    "ram": "Ram",
+    "mercedes": "Mercedes-Benz",
+    "mercedes benz": "Mercedes-Benz",
+    "mercedes-benz": "Mercedes-Benz",
+    "vw": "Volkswagen",
+    "volkswagen": "Volkswagen",
+    "gm": "GM",
+    "range rover": "Land Rover",
+    "land rover": "Land Rover",
+}
+
+
 def parse_brands_json(raw: str) -> list[str]:
-    """Parse {"brands": ["Tesla", ...]} -> deduped, cleaned brand names."""
+    """Parse {"brands": ["Tesla", ...]} -> normalized, deduped brand names."""
     obj = _extract_object(raw)
     items = obj.get("brands") if isinstance(obj, dict) else None
     if not isinstance(items, list):
@@ -74,8 +90,12 @@ def parse_brands_json(raw: str) -> list[str]:
     seen, out = set(), []
     for b in items:
         name = str(b).strip()
-        if name and name.lower() not in seen:
-            seen.add(name.lower())
+        if not name:
+            continue
+        name = _BRAND_ALIASES.get(name.lower(), name)
+        key = name.lower()
+        if key not in seen:
+            seen.add(key)
             out.append(name)
     return out
 
