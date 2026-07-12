@@ -40,15 +40,15 @@ playwright install chromium   # one-time browser download (ADR-003)
 
 ## 4. Run
 
-Two processes:
-
 ```bash
-# API
+# API — runs the full analysis pipeline in-process (crawl -> twin -> scores ->
+# probe -> recommendations), so no separate worker is needed for the dashboard.
 uvicorn app.main:app --reload            # http://127.0.0.1:8000/docs
-
-# Worker (separate terminal, same venv)
-python -m app.jobs.worker
 ```
+
+> The `app.jobs.worker` queue-worker still exists for future horizontal scaling
+> (it can process enqueued jobs), but the **dashboard flows run in the API
+> process** — this deliberately avoids a stale worker silently running old code.
 
 ## 5. Exercise the slice
 
