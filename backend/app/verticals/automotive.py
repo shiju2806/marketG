@@ -72,9 +72,4 @@ AUTOMOTIVE = VerticalPack(
         "What is the best luxury electric SUV?",
         "What is the best electric vehicle for off-road and adventure?",
     ),
-    competitor_brands=(
-        "Rivian", "Tesla", "Ford", "Chevrolet", "GMC", "Cadillac", "Lucid", "Polestar",
-        "Hyundai", "Kia", "Volkswagen", "Audi", "BMW", "Mercedes", "Mercedes-Benz",
-        "Toyota", "Honda", "Nissan", "Jeep", "Subaru", "Volvo", "Porsche", "Lexus",
-    ),
 )

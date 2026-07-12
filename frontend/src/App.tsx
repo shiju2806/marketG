@@ -22,9 +22,9 @@ export default function App() {
   const [analyzing, setAnalyzing] = useState<string | null>(null);
 
   useEffect(() => {
-    api.listOrganizations()
-      .then((o) => { setOrgs(o); if (o[0]) setOrgId(o[0].organization_id); })
-      .catch((e) => setError(String(e)));
+    // Load past analyses for the dropdown, but do NOT auto-select one — start on a
+    // clean "analyze a website" state so nothing looks pre-filled.
+    api.listOrganizations().then(setOrgs).catch((e) => setError(String(e)));
   }, []);
 
   useEffect(() => { if (orgId) refresh(orgId); }, [orgId]);
@@ -98,7 +98,8 @@ export default function App() {
         </div>
         {orgs.length > 0 && (
           <select value={orgId} onChange={(e) => setOrgId(e.target.value)}
-            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm">
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-ink-soft">
+            <option value="">Past analyses…</option>
             {orgs.map((o) => <option key={o.organization_id} value={o.organization_id}>{o.name}</option>)}
           </select>
         )}
@@ -132,6 +133,13 @@ export default function App() {
           </div>
         )}
       </form>
+
+      {!org && !analyzing && (
+        <p className="mt-10 text-center text-sm text-ink-faint">
+          Enter a company and website above to see how AI describes them in their market —
+          or pick a past analysis.
+        </p>
+      )}
 
       {org && (
         <>
