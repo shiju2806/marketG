@@ -61,11 +61,40 @@ async def generate_questions(pool, organization_id, limit: int = 12) -> list[Que
 async def generate_category_questions(pool, organization_id, limit: int = 8) -> list[Question]:
     """Unbranded category questions for the external probe (D-07).
 
-    These never name the brand, so a mention is *unprompted* — the real Citation
-    signal (does AI recommend us for the category vs competitors?).
+    Generated DYNAMICALLY from the company's actual market (LLM), so they fit the
+    business — never the brand name (a mention must be *unprompted*). Falls back to
+    the vertical pack's static list if the LLM is unavailable (keyless/error).
     """
+    from app.llm.factory import get_llm_provider
+
     org = await pool.fetchrow(
-        "select vertical_pack_id from organization where organization_id=$1", organization_id
+        "select name, website, vertical_pack_id from organization where organization_id=$1",
+        organization_id,
     )
     pack = get_vertical_pack(org["vertical_pack_id"] if org else "automotive")
-    return [Question(text=t, intent="citation", target_entity_id=None) for t in pack.category_questions][:limit]
+
+    # A short description of what the company does, from the crawled homepage/text.
+    description = await pool.fetchval(
+        """
+        select c.text from chunk c join document d on d.document_id = c.document_id
+         where c.organization_id = $1
+         order by (d.page_classification = 'homepage') desc, c.token_estimate desc
+         limit 1
+        """,
+        organization_id,
+    ) or ""
+
+    context = (
+        f"Company: {org['name']} ({org['website']}). Industry: {pack.pack_id}.\n"
+        f"What they do: {description[:500] or '(unknown — infer from the company name and industry)'}"
+    )
+
+    questions: list[str] = []
+    try:
+        questions, _ = await get_llm_provider().generate_category_questions(context, limit)
+    except Exception:  # noqa: BLE001 - fall back to the static pack list
+        questions = []
+    if not questions:
+        questions = list(pack.category_questions)
+
+    return [Question(text=q, intent="citation", target_entity_id=None) for q in questions][:limit]

@@ -73,3 +73,8 @@ class LLMProvider(Protocol):
 
     async def extract_brands(self, text: str) -> tuple[list[str], TokenUsage]:
         ...
+
+    async def generate_category_questions(
+        self, context: str, n: int
+    ) -> tuple[list[str], TokenUsage]:
+        ...

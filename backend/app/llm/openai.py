@@ -9,13 +9,27 @@ import httpx
 
 from app.config import settings
 from app.llm.base import TokenUsage
-from app.llm.util import parse_brands_json, parse_entities_json, parse_knowledge_json
+from app.llm.util import (
+    parse_brands_json,
+    parse_entities_json,
+    parse_knowledge_json,
+    parse_questions_json,
+)
 from app.verticals.base import VerticalPack
 
 _BRANDS_SYSTEM = (
     "Extract every company or product BRAND name mentioned in the text (e.g. car "
     "makers, product lines). Respond with JSON {\"brands\": [\"...\"]}. Only real "
     "brand/company names, deduplicated. No prose."
+)
+
+_QUESTIONS_SYSTEM = (
+    "You generate the category buyer questions a shopper asks an AI assistant when "
+    "researching this company's MARKET. The questions must ELICIT SPECIFIC PRODUCT "
+    "OR BRAND RECOMMENDATIONS — phrase them as 'what is the best…', 'which… should I "
+    "buy', 'top… for…', 'best… for {use case}'. Never name the specific company or "
+    "its products (a good answer would name brands unprompted). Cover the company's "
+    'main product categories and key use cases. Respond with JSON {"questions": ["...", ...]}. No prose.'
 )
 
 
@@ -152,6 +166,27 @@ class OpenAILLMProvider:
             resp.raise_for_status()
             data = resp.json()
         return _parse_brands(data["choices"][0]["message"]["content"]), self._usage(data)
+
+    async def generate_category_questions(self, context: str, n: int) -> tuple[list[str], TokenUsage]:
+        if not settings.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY not set")
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                json={
+                    "model": self.model,
+                    "response_format": {"type": "json_object"},
+                    "messages": [
+                        {"role": "system", "content": _QUESTIONS_SYSTEM},
+                        {"role": "user", "content": f"Generate {n} questions.\n\n{context}"},
+                    ],
+                },
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        return parse_questions_json(data["choices"][0]["message"]["content"]), self._usage(data)
 
     @staticmethod
     def _usage(data: dict) -> TokenUsage:

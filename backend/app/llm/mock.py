@@ -135,3 +135,7 @@ class MockLLMProvider:
                 seen.add(m.lower())
                 brands.append(m)
         return brands, TokenUsage(tokens=_est_tokens(text))
+
+    async def generate_category_questions(self, context: str, n: int) -> tuple[list[str], TokenUsage]:
+        # Keyless: return nothing so the caller falls back to the pack's static list.
+        return [], TokenUsage(tokens=_est_tokens(context))

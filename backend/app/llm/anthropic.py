@@ -10,12 +10,24 @@ import httpx
 
 from app.config import settings
 from app.llm.base import TokenUsage
-from app.llm.util import parse_brands_json, parse_entities_json, parse_knowledge_json
+from app.llm.util import (
+    parse_brands_json,
+    parse_entities_json,
+    parse_knowledge_json,
+    parse_questions_json,
+)
 from app.verticals.base import VerticalPack
 
 _BRANDS_SYSTEM = (
     "Extract every company or product BRAND name mentioned in the text. Return ONLY "
     'JSON {"brands": ["..."]}, deduplicated, real names only. No prose.'
+)
+
+_QUESTIONS_SYSTEM = (
+    "Generate the category buyer questions a shopper asks an AI assistant when "
+    "researching this company's MARKET. Questions must ELICIT SPECIFIC PRODUCT/BRAND "
+    "RECOMMENDATIONS ('what is the best…', 'which… should I buy', 'top… for…'). Never "
+    'name the specific company/products. Return ONLY JSON {"questions": ["..."]}. No prose.'
 )
 
 # Claude Sonnet pricing (approx, per 1M tokens).
@@ -92,6 +104,13 @@ class AnthropicLLMProvider:
         data = await self._message(_BRANDS_SYSTEM, text)
         raw = "".join(b.get("text", "") for b in data.get("content", []))
         return parse_brands_json(raw), self._usage(data)
+
+    async def generate_category_questions(self, context: str, n: int) -> tuple[list[str], TokenUsage]:
+        if not settings.anthropic_api_key:
+            raise RuntimeError("ANTHROPIC_API_KEY not set")
+        data = await self._message(_QUESTIONS_SYSTEM, f"Generate {n} questions.\n\n{context}")
+        raw = "".join(b.get("text", "") for b in data.get("content", []))
+        return parse_questions_json(raw), self._usage(data)
 
     async def _message(self, system: str, prompt: str) -> dict:
         async with httpx.AsyncClient() as client:
