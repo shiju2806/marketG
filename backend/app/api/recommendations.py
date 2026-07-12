@@ -7,10 +7,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import require_account
 from app.db import get_pool
+from app.recommend.delta import compute_delta
 from app.recommend.engine import generate_recommendations
 from app.recommend.insight import competitive_summary
 
 router = APIRouter(prefix="/api/v1", tags=["recommendations"])
+
+
+@router.get("/delta")
+async def get_delta(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
+    pool = await get_pool()
+    org = await pool.fetchrow(
+        "select organization_id from organization where organization_id=$1 and account_id=$2",
+        organization_id, account_id,
+    )
+    if org is None:
+        raise HTTPException(status_code=404, detail="organization not found")
+    return await compute_delta(pool, organization_id)
 
 
 @router.get("/competitive-summary")
