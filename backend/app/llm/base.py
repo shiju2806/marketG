@@ -78,3 +78,6 @@ class LLMProvider(Protocol):
         self, context: str, n: int
     ) -> tuple[list[str], TokenUsage]:
         ...
+
+    async def complete_json(self, system: str, user: str) -> tuple[dict, TokenUsage]:
+        ...

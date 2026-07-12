@@ -36,6 +36,12 @@ export interface VisibilityScore {
   question_count: number;
 }
 
+export interface CompetitiveSummary {
+  summary: string | null;
+  actions: string[];
+  leaders: string[];
+}
+
 export interface Recommendation {
   recommendation_id: string;
   title: string;
@@ -91,6 +97,8 @@ export const api = {
   probeLatest: (org: string) => req<ProbeReport>(`/probe/latest?organization_id=${org}`),
   runProbe: (org: string) =>
     req<{ citation: number }>(`/probe?organization_id=${org}`, { method: "POST" }),
+  competitiveSummary: (org: string) =>
+    req<CompetitiveSummary>(`/competitive-summary?organization_id=${org}`),
   recommendations: (org: string) => req<Recommendation[]>(`/recommendations?organization_id=${org}`),
   generateRecommendations: (org: string) =>
     req<{ count: number }>(`/recommendations/generate?organization_id=${org}`, { method: "POST" }),

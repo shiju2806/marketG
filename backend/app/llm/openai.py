@@ -193,6 +193,32 @@ class OpenAILLMProvider:
             data = resp.json()
         return parse_questions_json(data["choices"][0]["message"]["content"]), self._usage(data)
 
+    async def complete_json(self, system: str, user: str) -> tuple[dict, TokenUsage]:
+        if not settings.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY not set")
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                json={
+                    "model": self.model,
+                    "response_format": {"type": "json_object"},
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                },
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        import json as _json
+        try:
+            obj = _json.loads(data["choices"][0]["message"]["content"])
+        except (ValueError, KeyError):
+            obj = {}
+        return (obj if isinstance(obj, dict) else {}), self._usage(data)
+
     @staticmethod
     def _usage(data: dict) -> TokenUsage:
         u = data.get("usage", {})

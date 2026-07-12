@@ -116,6 +116,17 @@ class AnthropicLLMProvider:
         raw = "".join(b.get("text", "") for b in data.get("content", []))
         return parse_questions_json(raw), self._usage(data)
 
+    async def complete_json(self, system: str, user: str) -> tuple[dict, TokenUsage]:
+        import json as _json
+        data = await self._message(system + " Respond with JSON only.", user)
+        raw = "".join(b.get("text", "") for b in data.get("content", []))
+        start, end = raw.find("{"), raw.rfind("}")
+        try:
+            obj = _json.loads(raw[start : end + 1]) if start != -1 else {}
+        except ValueError:
+            obj = {}
+        return (obj if isinstance(obj, dict) else {}), self._usage(data)
+
     async def _message(self, system: str, prompt: str) -> dict:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
