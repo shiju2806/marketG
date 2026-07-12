@@ -2,11 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   api,
   type CompetitiveSummary,
+  type CrawlDiagnosis,
   type Organization,
   type ProbeReport,
   type Recommendation,
   type VisibilityScore,
 } from "./api";
+import { DiagnosisCard } from "./components/DiagnosisCard";
 import { ShareOfVoice } from "./components/ShareOfVoice";
 import { QuestionList } from "./components/QuestionList";
 import { RecommendationList } from "./components/RecommendationList";
@@ -29,6 +31,7 @@ export default function App() {
   const [score, setScore] = useState<VisibilityScore | null>(null);
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [insight, setInsight] = useState<CompetitiveSummary | null>(null);
+  const [diag, setDiag] = useState<CrawlDiagnosis | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", website: "" });
@@ -48,12 +51,14 @@ export default function App() {
   async function refresh(org: string) {
     setError(null);
     setInsight(null);
-    const [p, r] = await Promise.all([
+    const [p, r, dg] = await Promise.all([
       api.probeLatest(org).catch(() => null),
       api.recommendations(org).catch(() => []),
+      api.crawlDiagnosis(org).catch(() => null),
     ]);
     setProbe(p);
     setRecs(r);
+    setDiag(dg);
     setScore(await api.score(org).catch(() => null));
     api.competitiveSummary(org).then(setInsight).catch(() => setInsight(null));
   }
@@ -177,6 +182,16 @@ export default function App() {
                 {busy === "rerun" ? "Working…" : "↻ Re-run"}
               </button>
             </div>
+
+            {/* Opening finding: what happened when AI tried to read the site */}
+            {diag?.diagnosis && (
+              <div className="mt-5">
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-faint">
+                  When AI visited your site
+                </h3>
+                <DiagnosisCard data={diag} />
+              </div>
+            )}
 
             {mentionRate !== null && (
               <>

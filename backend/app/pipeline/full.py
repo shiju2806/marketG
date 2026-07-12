@@ -10,6 +10,7 @@ import httpx
 from app.config import settings
 from app.crawler.classifier import classify_page
 from app.crawler.crawler import crawl_site
+from app.crawler.diagnosis import diagnose
 from app.crawler.machine_readability import fetch_ai_crawler_policy
 from app.pipeline.extract import process_document
 from app.probe.engine import run_probe
@@ -29,10 +30,20 @@ async def crawl_and_store(pool, source) -> list:
         max_depth=settings.crawl_max_depth, timeout_ms=settings.crawl_timeout_ms,
     )
 
+    # Diagnose what happened reading the site — the report's opening finding.
+    diagnosis = diagnose(pages, ai_policy)
+    await pool.execute(
+        "update source set crawl_status=$2, crawl_diagnosis=$3::jsonb where source_id=$1",
+        source["source_id"], diagnosis["status"], diagnosis,
+    )
+
     doc_ids = []
     for page in pages:
         if not page.html:
             continue
+        # Don't build a twin from blocked/error pages — that's how we ended up with a
+        # fake "twin" from a 403 error page. Only readable pages feed extraction.
+        readable = bool(page.http_status and 200 <= page.http_status < 300 and len(page.text) >= 250)
         key = raw_key(str(source["account_id"]), str(source["source_id"]), page.content_hash)
         await upload_raw(key, page.html)
         doc_id = await pool.fetchval(
@@ -51,7 +62,8 @@ async def crawl_and_store(pool, source) -> list:
             classify_page(page.url, page.text), key, page.content_hash, page.http_status,
             page.js_required, page.has_schema_org, ai_policy,
         )
-        doc_ids.append(doc_id)
+        if readable:
+            doc_ids.append(doc_id)
 
     await pool.execute("update source set status='done' where source_id=$1", source["source_id"])
     return doc_ids

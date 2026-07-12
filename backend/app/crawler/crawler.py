@@ -20,6 +20,14 @@ from playwright.async_api import async_playwright
 
 from app.crawler.machine_readability import detect_schema_org
 
+# A realistic desktop-Chrome UA maximizes success on sites that block obvious bots.
+# (Sophisticated WAFs block by IP/fingerprint regardless — those surface as 403 in
+# the crawl diagnosis, which is itself a finding.)
+BROWSER_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+)
+
 
 @dataclass
 class PageResult:
@@ -54,6 +62,32 @@ def _extract_links(base_url: str, html: str) -> list[str]:
     return out
 
 
+async def _sitemap_urls(seed_url: str, client: httpx.AsyncClient, limit: int) -> list[str]:
+    """Best-effort URL discovery from /sitemap.xml (and robots.txt Sitemap: lines)."""
+    import re
+
+    base = f"{urlparse(seed_url).scheme}://{urlparse(seed_url).netloc}"
+    candidates = [f"{base}/sitemap.xml", f"{base}/sitemap_index.xml"]
+    try:
+        robots = await client.get(f"{base}/robots.txt", timeout=8.0)
+        if robots.status_code == 200:
+            candidates += re.findall(r"(?i)sitemap:\s*(\S+)", robots.text)
+    except httpx.HTTPError:
+        pass
+
+    urls: list[str] = []
+    for sm in candidates[:4]:
+        try:
+            resp = await client.get(sm, timeout=10.0)
+            if resp.status_code == 200 and "<" in resp.text:
+                urls += re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", resp.text)
+        except httpx.HTTPError:
+            continue
+        if len(urls) >= limit:
+            break
+    return urls[:limit]
+
+
 async def _static_text_len(url: str, client: httpx.AsyncClient) -> int:
     """Length of visible text WITHOUT running JS — used to flag js_required."""
     try:
@@ -75,10 +109,21 @@ async def crawl_site(
     queue: list[tuple[str, int]] = [(urldefrag(seed_url)[0], 0)]
 
     async with async_playwright() as pw, httpx.AsyncClient(
-        headers={"User-Agent": "marketGBot/0.1 (+https://marketg.dev)"}
+        headers={"User-Agent": BROWSER_UA}, follow_redirects=True
     ) as client:
         browser = await pw.chromium.launch(headless=True)
-        page = await browser.new_page()
+        context = await browser.new_context(
+            user_agent=BROWSER_UA, viewport={"width": 1280, "height": 900}, locale="en-US"
+        )
+        page = await context.new_page()
+
+        # Discover URLs from the sitemap up front so we don't depend on link-crawling
+        # a homepage that may be blocked or JS-only.
+        for u in await _sitemap_urls(seed_url, client, max_pages):
+            frag = urldefrag(u)[0]
+            if _same_domain(seed_url, frag) and frag not in {q[0] for q in queue}:
+                queue.append((frag, 1))
+
         try:
             while queue and len(results) < max_pages:
                 url, depth = queue.pop(0)
@@ -86,14 +131,21 @@ async def crawl_site(
                     continue
                 seen.add(url)
 
-                try:
-                    response = await page.goto(url, timeout=timeout_ms, wait_until="networkidle")
-                    status = response.status if response else None
-                    html = await page.content()
-                except Exception as exc:  # noqa: BLE001 - record and move on
-                    results.append(
-                        PageResult(url, "", None, False, False, f"ERROR: {exc}", "", [])
-                    )
+                status, html = None, ""
+                for attempt in range(2):  # one retry for transient failures
+                    try:
+                        response = await page.goto(url, timeout=timeout_ms, wait_until="domcontentloaded")
+                        status = response.status if response else None
+                        try:
+                            await page.wait_for_load_state("networkidle", timeout=4000)
+                        except Exception:  # noqa: BLE001 - networkidle is best-effort
+                            pass
+                        html = await page.content()
+                        break
+                    except Exception as exc:  # noqa: BLE001 - retry once, then record
+                        if attempt == 1:
+                            results.append(PageResult(url, "", None, False, False, f"ERROR: {exc}", "", []))
+                if status is None and not html:
                     continue
 
                 rendered_text = _visible_text(html)

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import require_account
 from app.db import get_pool
@@ -11,6 +11,23 @@ from app.jobs import queue
 from app.models import CrawlRequest, CrawlStatus, JobRef
 
 router = APIRouter(prefix="/api/v1", tags=["crawl"])
+
+
+@router.get("/crawl-diagnosis")
+async def crawl_diagnosis(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
+    """What happened when AI tried to read the site (latest crawl) — the opening finding."""
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """
+        select crawl_status, crawl_diagnosis from source
+         where organization_id=$1 and account_id=$2 and crawl_diagnosis is not null
+         order by created_at desc limit 1
+        """,
+        organization_id, account_id,
+    )
+    if row is None:
+        return {"status": None, "diagnosis": None}
+    return {"status": row["crawl_status"], "diagnosis": row["crawl_diagnosis"]}
 
 
 @router.post("/crawl", response_model=JobRef, status_code=202)

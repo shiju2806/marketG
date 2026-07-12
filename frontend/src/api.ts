@@ -36,6 +36,20 @@ export interface VisibilityScore {
   question_count: number;
 }
 
+export interface CrawlDiagnosis {
+  status: string | null;
+  diagnosis: {
+    status: "readable" | "blocked" | "thin" | "unreachable";
+    headline: string;
+    detail: string;
+    pages_attempted: number;
+    pages_read: number;
+    pages_blocked: number;
+    ai_allowed_in_robots: boolean;
+    has_structured_data: boolean;
+  } | null;
+}
+
 export interface CompetitiveSummary {
   summary: string | null;
   actions: string[];
@@ -94,6 +108,7 @@ export const api = {
   score: (org: string) => req<VisibilityScore>(`/visibility-score?organization_id=${org}`),
   runVisibility: (org: string) =>
     req<{ run_id: string }>(`/visibility/run?organization_id=${org}`, { method: "POST" }),
+  crawlDiagnosis: (org: string) => req<CrawlDiagnosis>(`/crawl-diagnosis?organization_id=${org}`),
   probeLatest: (org: string) => req<ProbeReport>(`/probe/latest?organization_id=${org}`),
   runProbe: (org: string) =>
     req<{ citation: number }>(`/probe?organization_id=${org}`, { method: "POST" }),
