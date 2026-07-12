@@ -13,8 +13,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.deps import require_account
 from app.db import get_pool
 from app.probe.engine import run_probe
+from app.probe.sources import cited_sources
 
 router = APIRouter(prefix="/api/v1", tags=["probe"])
+
+
+@router.get("/cited-sources")
+async def get_cited_sources(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
+    pool = await get_pool()
+    org = await pool.fetchrow(
+        "select organization_id from organization where organization_id=$1 and account_id=$2",
+        organization_id, account_id,
+    )
+    if org is None:
+        raise HTTPException(status_code=404, detail="organization not found")
+    return await cited_sources(pool, organization_id)
 
 
 @router.post("/probe", status_code=201)

@@ -50,6 +50,35 @@ export interface CrawlDiagnosis {
   } | null;
 }
 
+export interface CitedSource {
+  domain: string;
+  count: number;
+  share: number;
+  is_first_party: boolean;
+}
+
+export interface CitedSources {
+  your_domain: string | null;
+  your_domain_cited: boolean;
+  total_citations: number;
+  sources: CitedSource[];
+}
+
+export interface DeltaCategory {
+  question: string;
+  ai_mentions: boolean;
+  competitors: string[];
+  have_content: boolean | null;
+  evidence: { heading?: string; url?: string; cos: number } | null;
+  quadrant: "winning" | "hidden" | "missing" | "borrowed" | "unknown";
+}
+
+export interface Delta {
+  crawl_status: string | null;
+  twin_readable: boolean;
+  categories: DeltaCategory[];
+}
+
 export interface CompetitiveSummary {
   summary: string | null;
   actions: string[];
@@ -109,6 +138,8 @@ export const api = {
   runVisibility: (org: string) =>
     req<{ run_id: string }>(`/visibility/run?organization_id=${org}`, { method: "POST" }),
   crawlDiagnosis: (org: string) => req<CrawlDiagnosis>(`/crawl-diagnosis?organization_id=${org}`),
+  citedSources: (org: string) => req<CitedSources>(`/cited-sources?organization_id=${org}`),
+  delta: (org: string) => req<Delta>(`/delta?organization_id=${org}`),
   probeLatest: (org: string) => req<ProbeReport>(`/probe/latest?organization_id=${org}`),
   runProbe: (org: string) =>
     req<{ citation: number }>(`/probe?organization_id=${org}`, { method: "POST" }),

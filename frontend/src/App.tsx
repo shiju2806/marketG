@@ -3,12 +3,16 @@ import {
   api,
   type CompetitiveSummary,
   type CrawlDiagnosis,
+  type CitedSources as CitedSourcesT,
+  type Delta,
   type Organization,
   type ProbeReport,
   type Recommendation,
   type VisibilityScore,
 } from "./api";
 import { DiagnosisCard } from "./components/DiagnosisCard";
+import { CitedSources } from "./components/CitedSources";
+import { GapMatrix } from "./components/GapMatrix";
 import { ShareOfVoice } from "./components/ShareOfVoice";
 import { QuestionList } from "./components/QuestionList";
 import { RecommendationList } from "./components/RecommendationList";
@@ -32,6 +36,8 @@ export default function App() {
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [insight, setInsight] = useState<CompetitiveSummary | null>(null);
   const [diag, setDiag] = useState<CrawlDiagnosis | null>(null);
+  const [cited, setCited] = useState<CitedSourcesT | null>(null);
+  const [delta, setDelta] = useState<Delta | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", website: "" });
@@ -51,14 +57,18 @@ export default function App() {
   async function refresh(org: string) {
     setError(null);
     setInsight(null);
-    const [p, r, dg] = await Promise.all([
+    const [p, r, dg, cs, dl] = await Promise.all([
       api.probeLatest(org).catch(() => null),
       api.recommendations(org).catch(() => []),
       api.crawlDiagnosis(org).catch(() => null),
+      api.citedSources(org).catch(() => null),
+      api.delta(org).catch(() => null),
     ]);
     setProbe(p);
     setRecs(r);
     setDiag(dg);
+    setCited(cs);
+    setDelta(dl);
     setScore(await api.score(org).catch(() => null));
     api.competitiveSummary(org).then(setInsight).catch(() => setInsight(null));
   }
@@ -234,10 +244,26 @@ export default function App() {
                   )}
                 </div>
 
+                {/* The gap: what you have vs what AI says */}
+                {delta && (
+                  <Section title="Content gap" subtitle="Your content vs. what buyers ask AI">
+                    <GapMatrix data={delta} />
+                  </Section>
+                )}
+
                 {/* Standings */}
                 <Section title="Competitive standings" subtitle="Which brands AI names when buyers research this market">
                   <ShareOfVoice data={sov} />
                 </Section>
+
+                {/* Who AI trusts */}
+                {cited && cited.total_citations > 0 && (
+                  <Section title="Who AI cites" subtitle="The sources assistants trust for your market"
+                    defaultOpen={false}
+                    right={<span className="font-mono text-xs text-ink-faint">{cited.total_citations}</span>}>
+                    <CitedSources data={cited} />
+                  </Section>
+                )}
 
                 {/* Fix per category */}
                 <Section title="Where you're losing" subtitle="Categories where AI names rivals but not you" defaultOpen
