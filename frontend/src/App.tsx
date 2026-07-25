@@ -27,7 +27,7 @@ function initialTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-export default function App() {
+function Dashboard() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [orgId, setOrgId] = useState("");
@@ -298,4 +298,131 @@ export default function App() {
 
 function Diag({ label, v }: { label: string; v: number | null }) {
   return <span>{label} <span className="text-ink-soft">{v ?? "—"}</span></span>;
+}
+
+function RestaurantLanding() {
+  const scrollToAudit = () => document.getElementById("audit")?.scrollIntoView({ behavior: "smooth" });
+
+  return (
+    <main className="restaurant-site">
+      <div className="top-ticker">
+        <span>22% of diners use AI to choose a restaurant</span>
+        <span className="ticker-star">✦</span>
+        <span>Don&apos;t let your locations get left off the list</span>
+      </div>
+
+      <nav className="restaurant-nav" aria-label="Main navigation">
+        <a className="restaurant-logo" href="#top" aria-label="marketG home">
+          <span className="logo-mark">mG</span>
+          <span>market<span>G</span></span>
+        </a>
+        <div className="nav-links">
+          <a href="#how-it-works">How it works</a>
+          <a href="#teams">For your team</a>
+        </div>
+        <button className="nav-cta" onClick={scrollToAudit}>Get an audit <span>↗</span></button>
+      </nav>
+
+      <section className="hero" id="top">
+        <div className="hero-copy">
+          <div className="eyebrow"><span className="dot" /> AI DISCOVERY FOR RESTAURANT CHAINS</div>
+          <h1>Be the restaurant<br /><em>AI recommends.</em></h1>
+          <p className="hero-lede">marketG shows restaurant groups exactly how AI sees every location—and how to become the answer when diners ask where to eat.</p>
+          <div className="hero-actions">
+            <button className="btn-primary" onClick={scrollToAudit}>Get your AI visibility audit <span>→</span></button>
+            <a className="text-link" href="#how-it-works">See how it works <span>↓</span></a>
+          </div>
+          <p className="audience-line"><span>FOR</span> MULTI-LOCATION · QSR · FAST-CASUAL · DELIVERY-FIRST BRANDS</p>
+        </div>
+
+        <div className="hero-visual" aria-label="Example AI restaurant recommendation">
+          <div className="burst burst-one">TASTY<br />DATA</div>
+          <div className="hero-squiggle">⌇</div>
+          <div className="chat-window">
+            <div className="chat-top"><span className="chat-dots"><i /><i /><i /></span><b>AI SEARCH</b><span>LIVE</span></div>
+            <div className="chat-body">
+              <div className="user-query">Best family-friendly pizza<br />near me tonight?</div>
+              <div className="ai-label"><span>✦</span> ANSWER</div>
+              <p className="ai-answer">For a relaxed family dinner, try <strong>Pizza Palace</strong>—they have a kids&apos; menu, vegetarian options, and delivery.</p>
+              <div className="recommendation">
+                <div className="pizza-icon">🍕</div>
+                <div><strong>Pizza Palace</strong><small>0.4 km away · Open until 11 pm</small></div>
+                <b className="score-pill">98</b>
+              </div>
+              <div className="competitor-row"><span>Other places mentioned</span><b>3 competitors</b></div>
+            </div>
+          </div>
+          <div className="missing-card"><span className="missing-x">×</span><b>Your location</b><small>Not mentioned</small></div>
+          <div className="arrow-note">This is where<br />marketG comes in <span>↘</span></div>
+        </div>
+      </section>
+
+      <section className="logo-strip" aria-label="Ideal restaurant operators">
+        <p>BUILT FOR THE TEAMS BEHIND GREAT RESTAURANTS</p>
+        <div><span>BRAND</span><span>LOCAL</span><span>DIGITAL</span><span>OPS</span><span>GROWTH</span></div>
+      </section>
+
+      <section className="problem-section">
+        <div className="section-kicker"><span>01</span> THE PROBLEM</div>
+        <div className="problem-heading"><h2>Diners ask AI.<br />AI makes a <i>shortlist.</i></h2><p>You may already be losing the decision before a guest sees your website, opens a delivery app, or walks through the door.</p></div>
+        <div className="prompt-grid">
+          <article className="prompt-card yellow"><span className="prompt-num">01</span><p>“What&apos;s a good late-night spot near me?”</p><span className="prompt-tag">OCCASION</span></article>
+          <article className="prompt-card red"><span className="prompt-num">02</span><p>“Where can I get gluten-free takeout?”</p><span className="prompt-tag">DIETARY</span></article>
+          <article className="prompt-card green"><span className="prompt-num">03</span><p>“What&apos;s good for a team lunch?”</p><span className="prompt-tag">GROUP ORDER</span></article>
+        </div>
+      </section>
+
+      <section className="split-insight" id="how-it-works">
+        <div className="insight-copy">
+          <div className="section-kicker light"><span>02</span> THE FIX</div>
+          <h2>Turn your scattered restaurant data into an <i>AI-ready</i> advantage.</h2>
+          <p>marketG maps the facts that matter for discovery: menus, dietary details, location data, ordering, reviews, services, and the sources that support them.</p>
+          <button className="btn-lime" onClick={scrollToAudit}>See your visibility <span>→</span></button>
+        </div>
+        <div className="insight-board">
+          <div className="board-title"><span>YOUR AI VISIBILITY</span><b>LIVE REPORT</b></div>
+          <div className="score-display"><span>73</span><small>/100</small><b>+12 THIS MONTH ↗</b></div>
+          <div className="metric-line"><span>AI recommendations</span><b>64%</b><i><em style={{ width: "64%" }} /></i></div>
+          <div className="metric-line"><span>Menu clarity</span><b>87%</b><i><em style={{ width: "87%" }} /></i></div>
+          <div className="metric-line"><span>Location accuracy</span><b>51%</b><i><em style={{ width: "51%" }} /></i></div>
+          <div className="board-callout"><span>!</span><p><b>18 locations</b> have missing dietary details.</p><strong>FIX THIS →</strong></div>
+        </div>
+      </section>
+
+      <section className="steps-section">
+        <div className="section-kicker"><span>03</span> HOW IT WORKS</div>
+        <h2>One clear path from<br /><i>invisible</i> to recommended.</h2>
+        <div className="steps-grid">
+          <article><span className="step-number">01</span><div className="step-icon pin">⌖</div><h3>Scan your footprint</h3><p>We connect your locations, menus, website, ordering, and public sources.</p></article>
+          <article><span className="step-number">02</span><div className="step-icon chat">✦</div><h3>Ask what diners ask</h3><p>We test real discovery questions across the AI tools your guests use.</p></article>
+          <article><span className="step-number">03</span><div className="step-icon spark">↗</div><h3>Know what to fix</h3><p>Get prioritized, location-level actions that improve your visibility.</p></article>
+        </div>
+      </section>
+
+      <section className="teams-section" id="teams">
+        <div className="teams-visual"><div className="plate"><div>market<span>G</span></div></div><span className="fork">⌁</span><span className="pepper">✦</span></div>
+        <div className="teams-copy"><div className="section-kicker"><span>04</span> MADE FOR YOUR TEAM</div><h2>One source of truth for every team that shapes <i>discovery.</i></h2>
+          <div className="team-list"><p><b>BRAND &amp; MARKETING</b><span>Win the category moments that matter.</span></p><p><b>LOCAL MARKETING</b><span>See which locations are missing—and why.</span></p><p><b>DIGITAL &amp; OPS</b><span>Keep menus, details, and ordering AI-ready.</span></p><p><b>LEADERSHIP</b><span>See where competitors own the answer.</span></p></div>
+        </div>
+      </section>
+
+      <section className="audit-section" id="audit">
+        <div className="audit-star">✦</div>
+        <p className="eyebrow"><span className="dot" /> READY WHEN YOU ARE</p>
+        <h2>Is AI serving up<br /><i>your</i> restaurant?</h2>
+        <p>Find out what AI knows about your brand, your locations, and your competitors.</p>
+        <form className="audit-form" onSubmit={(event) => event.preventDefault()}>
+          <input type="email" aria-label="Work email" placeholder="Work email" />
+          <button type="submit">Get an AI visibility audit <span>→</span></button>
+        </form>
+        <small>No spam. Just a clear view of your AI discovery.</small>
+      </section>
+
+      <footer className="restaurant-footer"><a className="restaurant-logo" href="#top"><span className="logo-mark">mG</span><span>market<span>G</span></span></a><p>AI visibility for restaurant chains.</p><span>© 2026 marketG</span></footer>
+    </main>
+  );
+}
+
+export default function App() {
+  return window.location.pathname === "/dashboard" ? <Dashboard /> : <RestaurantLanding />;
 }
