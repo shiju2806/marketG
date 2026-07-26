@@ -50,6 +50,17 @@ export interface CrawlDiagnosis {
   } | null;
 }
 
+export interface TrendPoint {
+  date: string;
+  citation: number | null;
+  your_share: number | null;
+  targets: string[];
+}
+
+export interface VisibilityTrend {
+  points: TrendPoint[];
+}
+
 export interface CitedSource {
   domain: string;
   count: number;
@@ -141,6 +152,7 @@ export const api = {
   citedSources: (org: string) => req<CitedSources>(`/cited-sources?organization_id=${org}`),
   delta: (org: string) => req<Delta>(`/delta?organization_id=${org}`),
   probeLatest: (org: string) => req<ProbeReport>(`/probe/latest?organization_id=${org}`),
+  trend: (org: string) => req<VisibilityTrend>(`/visibility-trend?organization_id=${org}`),
   runProbe: (org: string) =>
     req<{ citation: number }>(`/probe?organization_id=${org}`, { method: "POST" }),
   competitiveSummary: (org: string) =>

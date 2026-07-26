@@ -42,6 +42,31 @@ async def start_probe(organization_id: UUID = Query(...), account_id: UUID = Dep
     return await run_probe(pool, account_id, organization_id)
 
 
+@router.get("/visibility-trend")
+async def visibility_trend(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
+    """AI visibility over time — one point per probe run (seeds the longitudinal moat)."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        select created_at, citation, metrics, targets from probe_run
+         where organization_id=$1 and account_id=$2 and status='done'
+         order by created_at asc limit 60
+        """,
+        organization_id, account_id,
+    )
+    points = []
+    for r in rows:
+        sov = (r["metrics"] or {}).get("share_of_voice", [])
+        you = next((s for s in sov if s.get("is_you")), None)
+        points.append({
+            "date": r["created_at"].isoformat(),
+            "citation": r["citation"],
+            "your_share": round(you["share"] * 100) if you else None,
+            "targets": r["targets"],
+        })
+    return {"points": points}
+
+
 @router.get("/probe/latest")
 async def latest_probe(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
     pool = await get_pool()

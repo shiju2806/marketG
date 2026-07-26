@@ -9,11 +9,13 @@ import {
   type ProbeReport,
   type Recommendation,
   type VisibilityScore,
+  type VisibilityTrend,
 } from "./api";
 import { DiagnosisCard } from "./components/DiagnosisCard";
 import { CitedSources } from "./components/CitedSources";
 import { GapMatrix } from "./components/GapMatrix";
 import { ShareOfVoice } from "./components/ShareOfVoice";
+import { TrendChart } from "./components/TrendChart";
 import { QuestionList } from "./components/QuestionList";
 import { RecommendationList } from "./components/RecommendationList";
 import { Section } from "./components/Section";
@@ -38,6 +40,7 @@ export default function App() {
   const [diag, setDiag] = useState<CrawlDiagnosis | null>(null);
   const [cited, setCited] = useState<CitedSourcesT | null>(null);
   const [delta, setDelta] = useState<Delta | null>(null);
+  const [trend, setTrend] = useState<VisibilityTrend | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", website: "" });
@@ -69,6 +72,7 @@ export default function App() {
     setDiag(dg);
     setCited(cs);
     setDelta(dl);
+    api.trend(org).then(setTrend).catch(() => setTrend(null));
     setScore(await api.score(org).catch(() => null));
     api.competitiveSummary(org).then(setInsight).catch(() => setInsight(null));
   }
@@ -243,6 +247,13 @@ export default function App() {
                     </div>
                   )}
                 </div>
+
+                {/* Visibility over time */}
+                {trend && trend.points.length >= 2 && (
+                  <Section title="Visibility over time" subtitle="Your share of voice across analyses">
+                    <TrendChart data={trend} />
+                  </Section>
+                )}
 
                 {/* The gap: what you have vs what AI says */}
                 {delta && (
