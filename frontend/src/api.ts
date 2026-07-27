@@ -96,6 +96,15 @@ export interface CompetitiveSummary {
   leaders: string[];
 }
 
+export interface Artifact {
+  title: string;
+  gap_type: string;
+  body_markdown: string;
+  body_html: string;
+  schema_jsonld: Record<string, unknown>;
+  notes: string;
+}
+
 export interface Recommendation {
   recommendation_id: string;
   title: string;
@@ -158,6 +167,10 @@ export const api = {
   competitiveSummary: (org: string) =>
     req<CompetitiveSummary>(`/competitive-summary?organization_id=${org}`),
   recommendations: (org: string) => req<Recommendation[]>(`/recommendations?organization_id=${org}`),
+  remediate: (recommendationId: string) =>
+    req<{ remediation_id: string; artifact: Artifact }>(
+      `/remediate?recommendation_id=${recommendationId}`, { method: "POST" }
+    ),
   generateRecommendations: (org: string) =>
     req<{ count: number }>(`/recommendations/generate?organization_id=${org}`, { method: "POST" }),
 };
