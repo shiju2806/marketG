@@ -13,19 +13,24 @@ from app.twin.predicates import canonicalize_predicate
 
 
 async def upsert_entity(
-    conn, account_id, organization_id, entity_type: str, canonical_name: str, confidence: float
+    conn, account_id, organization_id, entity_type: str, canonical_name: str,
+    confidence: float, resolution_key: str
 ) -> str:
+    """Upsert deduped on the normalized resolution key (D-03), keeping the first-seen
+    display name. Variants ("2026 R1S Dual", "r1s") collapse to one entity."""
     return await conn.fetchval(
         """
         insert into entity (account_id, organization_id, entity_type, canonical_name,
-                            confidence, status, source)
-        values ($1,$2,$3,$4,$5,'resolved','extraction')
-        on conflict (organization_id, entity_type, lower(canonical_name))
+                            resolution_key, confidence, status, source)
+        values ($1,$2,$3,$4,$5,$6,'resolved','extraction')
+        on conflict (organization_id, entity_type, resolution_key)
+            where resolution_key is not null
         do update set confidence = greatest(entity.confidence, excluded.confidence),
                       status = 'resolved'
         returning entity_id
         """,
-        account_id, organization_id, entity_type, canonical_name, round(confidence, 2),
+        account_id, organization_id, entity_type, canonical_name, resolution_key,
+        round(confidence, 2),
     )
 
 

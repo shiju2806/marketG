@@ -29,3 +29,6 @@ class VerticalPack:
     # Category / UNBRANDED questions for the external probe (D-07): measure whether
     # AI names the brand *unprompted* vs competitors. No brand/vehicle placeholders.
     category_questions: tuple[str, ...] = ()
+    # Trim / variant / packaging tokens stripped during entity resolution (D-03) so
+    # "2026 R1S Dual" and "r1s" collapse to one entity (while keeping R1S != R1T).
+    variant_terms: tuple[str, ...] = ()

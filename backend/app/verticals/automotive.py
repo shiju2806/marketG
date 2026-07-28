@@ -72,4 +72,10 @@ AUTOMOTIVE = VerticalPack(
         "What is the best luxury electric SUV?",
         "What is the best electric vehicle for off-road and adventure?",
     ),
+    variant_terms=(
+        "dual", "quad", "tri", "motor", "max", "standard", "large", "battery",
+        "pack", "performance", "adventure", "explore", "launch", "edition",
+        "awd", "rwd", "fwd", "4wd", "long", "range", "extended", "plus", "premium",
+        "with", "the",
+    ),
 )

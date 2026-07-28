@@ -6,6 +6,7 @@ detection. Kept side-effect-free so it's unit-testable; the writer applies it.
 """
 from __future__ import annotations
 
+import re
 from difflib import SequenceMatcher
 
 from app.verticals.base import VerticalPack
@@ -45,6 +46,39 @@ def canonicalize(name: str, entity_type: str, pack: VerticalPack) -> str:
     if seed and seed[0] == entity_type:
         return seed[1]
     return " ".join(name.split()).strip()
+
+
+def _tokens(name: str) -> list[str]:
+    return re.sub(r"[^a-z0-9 ]", " ", name.lower()).split()
+
+
+def resolution_key(name: str, pack: VerticalPack, org_name: str = "") -> str:
+    """A normalized blocking key so entity variants collapse (D-03).
+
+    Strips the org/brand name, 4-digit years, and vertical variant/trim tokens,
+    leaving the discriminating core (e.g. "2026 R1S Dual Motor" -> "r1s",
+    "Rivian R1S" -> "r1s"). Deterministic + precise: keeps R1S != R1T (pure
+    embedding similarity would wrongly merge those).
+    """
+    variants = {v.lower() for v in pack.variant_terms}
+    org_tokens = {t for t in _tokens(org_name)}
+    core = [
+        t for t in _tokens(name)
+        if t not in variants and t not in org_tokens and not re.fullmatch(r"(19|20)\d{2}", t)
+    ]
+    return "".join(core) if core else "".join(_tokens(name))
+
+
+def clean_display_name(name: str, pack: VerticalPack, org_name: str = "") -> str:
+    """Human-facing name with year/trim/brand stripped, original core casing kept."""
+    variants = {v.lower() for v in pack.variant_terms}
+    org_tokens = {t.lower() for t in _tokens(org_name)}
+    kept = [
+        w for w in re.split(r"\s+", name.strip())
+        if w and re.sub(r"[^a-z0-9]", "", w.lower()) not in variants
+        and w.lower() not in org_tokens and not re.fullmatch(r"(19|20)\d{2}", w)
+    ]
+    return " ".join(kept) if kept else name.strip()
 
 
 def fuzzy_match(name: str, existing: list[str], threshold: float = 0.9) -> str | None:

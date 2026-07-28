@@ -78,35 +78,43 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
         async with conn.transaction():
             await conn.execute("delete from chunk where document_id=$1", document["document_id"])
 
-            # Existing resolved entity names (for fuzzy dedup, D-03).
+            # Entity resolution by normalized blocking key (D-03): variants like
+            # "2026 R1S Dual" and "r1s" collapse to one canonical entity.
+            org_name = await conn.fetchval(
+                "select name from organization where organization_id=$1", document["organization_id"]
+            ) or ""
             existing = await conn.fetch(
                 "select entity_type, canonical_name from entity where organization_id=$1 and status='resolved'",
                 document["organization_id"],
             )
-            names_by_type: dict[str, list[str]] = {}
+            key_to_canonical: dict[tuple[str, str], str] = {}
             for r in existing:
-                names_by_type.setdefault(r["entity_type"], []).append(r["canonical_name"])
+                rk = governance.resolution_key(r["canonical_name"], pack, org_name)
+                key_to_canonical.setdefault((r["entity_type"], rk), r["canonical_name"])
 
             name_to_id: dict[str, str] = {}
 
             async def resolve_entity(raw_name: str, entity_type: str, conf: float) -> str | None:
                 if not raw_name:
                     return None
-                canonical = governance.canonicalize(raw_name, entity_type, pack)
-                pool_names = names_by_type.setdefault(entity_type, [])
-                match = governance.fuzzy_match(canonical, pool_names)
-                canonical = match or canonical
-                if canonical not in pool_names:
-                    pool_names.append(canonical)
-                key = (entity_type, raw_name.lower())
-                if key in name_to_id:
-                    return name_to_id[key]
+                rk = governance.resolution_key(raw_name, pack, org_name)
+                block = (entity_type, rk)
+                canonical = key_to_canonical.get(block)
+                if canonical is None:
+                    # First time we see this key: ontology seed wins, else cleaned name.
+                    seeded = governance.canonicalize(raw_name, entity_type, pack)
+                    canonical = seeded if seeded != raw_name else governance.clean_display_name(
+                        raw_name, pack, org_name
+                    )
+                    key_to_canonical[block] = canonical
+                if block in name_to_id:
+                    return name_to_id[block]
                 entity_id = await writer.upsert_entity(
                     conn, document["account_id"], document["organization_id"],
                     entity_type, canonical, governance.overall_confidence(conf, page_class),
+                    resolution_key=rk,
                 )
-                name_to_id[key] = entity_id
-                name_to_id[(entity_type, canonical.lower())] = entity_id
+                name_to_id[block] = entity_id
                 counters["entities"] += 1
                 return entity_id
 
@@ -129,12 +137,12 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
                     page_classification=page_class, model_version=model_version,
                 )
 
-                # Entities (+ provenance link).
-                type_lookup: dict[str, str] = {}
+                # Entities (+ provenance link). Map raw name -> resolved id for this chunk.
+                resolved: dict[str, str] = {}
                 for ent in knowledge.entities:
                     entity_id = await resolve_entity(ent.name, ent.entity_type, ent.confidence)
                     if entity_id:
-                        type_lookup[ent.name.lower()] = ent.entity_type
+                        resolved[ent.name.lower()] = entity_id
                         await conn.execute(
                             "insert into chunk_entity (chunk_id, entity_id, account_id) "
                             "values ($1,$2,$3) on conflict do nothing",
@@ -143,8 +151,8 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
 
                 # Relationships (only between entities we resolved).
                 for rel in knowledge.relationships:
-                    subj = name_to_id.get((type_lookup.get(rel.subject.lower(), ""), rel.subject.lower()))
-                    obj = name_to_id.get((type_lookup.get(rel.object.lower(), ""), rel.object.lower()))
+                    subj = resolved.get(rel.subject.lower())
+                    obj = resolved.get(rel.object.lower())
                     if subj and obj and subj != obj:
                         await writer.write_relationship(
                             conn, document["account_id"], document["organization_id"],
@@ -156,9 +164,7 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
 
                 # Claims (subject may be an entity or free text).
                 for claim in knowledge.claims:
-                    subj_id = name_to_id.get(
-                        (type_lookup.get(claim.subject.lower(), ""), claim.subject.lower())
-                    )
+                    subj_id = resolved.get(claim.subject.lower())
                     result = await writer.write_claim(
                         conn, document["account_id"], document["organization_id"],
                         subject_entity_id=subj_id, subject_text=None if subj_id else claim.subject,
