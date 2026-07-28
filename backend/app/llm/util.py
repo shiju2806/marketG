@@ -41,19 +41,33 @@ def parse_knowledge_json(raw: str) -> KnowledgeExtraction:
         for r in obj.get("relationships", [])
         if isinstance(r, dict) and r.get("subject") and r.get("predicate") and r.get("object")
     ]
-    claims = [
-        ExtractedClaim(
+    claims = []
+    for c in obj.get("claims", []):
+        if not (isinstance(c, dict) and c.get("subject") and c.get("predicate")):
+            continue
+        value = _clean_val(c.get("value"))
+        obj_ = _clean_val(c.get("object"))
+        # Drop junk: a spec/pricing claim with no value AND no object carries no fact.
+        if not value and not obj_:
+            continue
+        claims.append(ExtractedClaim(
             subject=str(c["subject"]).strip(),
             predicate=str(c.get("predicate", "")).strip(),
-            object=str(c.get("object", "")).strip(),
-            value=str(c.get("value", "")).strip(),
+            object=obj_,
+            value=value,
             claim_type=str(c.get("claim_type", "capability")).strip(),
             confidence=_clamp(c.get("confidence")),
-        )
-        for c in obj.get("claims", [])
-        if isinstance(c, dict) and c.get("subject") and c.get("predicate")
-    ]
+        ))
     return KnowledgeExtraction(entities=entities, relationships=relationships, claims=claims)
+
+
+# Values the LLM emits that mean "no value" — treat as empty so junk claims drop.
+_NULLISH = {"", "none", "null", "n/a", "na", "unknown", "true", "false"}
+
+
+def _clean_val(v) -> str:
+    s = str(v or "").strip()
+    return "" if s.lower() in _NULLISH else s
 
 
 def parse_questions_json(raw: str) -> list[str]:

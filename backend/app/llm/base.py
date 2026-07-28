@@ -67,7 +67,7 @@ class LLMProvider(Protocol):
         ...
 
     async def extract_knowledge(
-        self, text: str, pack: VerticalPack
+        self, text: str, pack: VerticalPack, subject_hint: str = ""
     ) -> tuple[KnowledgeExtraction, TokenUsage]:
         ...
 

@@ -96,7 +96,7 @@ class MockLLMProvider:
         return list(found.values()), usage
 
     async def extract_knowledge(
-        self, text: str, pack: VerticalPack
+        self, text: str, pack: VerticalPack, subject_hint: str = ""
     ) -> tuple[KnowledgeExtraction, TokenUsage]:
         entities, usage = await self.extract_entities(text, pack)
 

@@ -29,3 +29,18 @@ def test_filters_incomplete_records():
 def test_handles_garbage():
     k = parse_knowledge_json("sorry, no JSON")
     assert (k.entities, k.relationships, k.claims) == ([], [], [])
+
+
+def test_drops_junk_valueless_claims():
+    # The exact "R1S has_feature None" problem — claims with no value AND no object.
+    raw = """{
+      "claims": [
+        {"subject":"R1S","predicate":"has_feature","value":"None","claim_type":"spec"},
+        {"subject":"R1S","predicate":"has_spec","value":"true"},
+        {"subject":"R1S","predicate":"range","value":"410 miles","claim_type":"spec"},
+        {"subject":"R1S","predicate":"integrates","object":"Apple CarPlay","claim_type":"capability"}
+      ]
+    }"""
+    k = parse_knowledge_json(raw)
+    kept = {(c.predicate, c.value or c.object) for c in k.claims}
+    assert kept == {("range", "410 miles"), ("integrates", "Apple CarPlay")}  # junk dropped

@@ -56,10 +56,15 @@ async def process_document(pool: asyncpg.Pool, document: asyncpg.Record) -> dict
     # calls were the main bottleneck when run sequentially. DB writes stay ordered below.
     sem = asyncio.Semaphore(settings.extract_concurrency)
 
+    # Page subject anchors extraction so facts attach to the specific product, not
+    # the brand (the main extraction-quality fix). Prefer the H1/heading, else title.
+    page_subject = (normalized.title or "").split("—")[0].split("|")[0].strip()
+
     async def _extract(chunk):
         text_in = f"{chunk.heading}. {chunk.text}"[: settings.extract_max_chars_per_chunk]
+        subject = chunk.heading or page_subject
         async with sem:
-            return await llm.extract_knowledge(text_in, pack)
+            return await llm.extract_knowledge(text_in, pack, subject_hint=subject)
 
     knowledge_results = await asyncio.gather(*[_extract(c) for c in chunks])
     knowledges = []

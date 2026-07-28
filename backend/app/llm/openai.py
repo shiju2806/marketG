@@ -59,10 +59,17 @@ _KNOWLEDGE_SYSTEM = (
     '  "entities":      [{"name","entity_type","confidence"}]\n'
     '  "relationships": [{"subject","predicate","object","confidence"}]\n'
     '  "claims":        [{"subject","predicate","object","value","claim_type","confidence"}]\n'
-    "subject/object in relationships are entity names. Claims are assertions "
-    "(specs, performance, compliance, awards) — claim_type one of: spec, performance, "
-    "compliance, capability, comparison, award, safety, pricing. confidence is 0-1. "
-    "Use only the provided entity types. No prose."
+    "RULES (follow strictly):\n"
+    "- SUBJECT must be the SPECIFIC product/model/entity being described (e.g. a "
+    "vehicle model like 'R1S'), NEVER the parent brand. Resolve pronouns ('it', "
+    "'this SUV', 'the vehicle') to that specific entity by name.\n"
+    "- Extract ONLY facts explicitly stated in the text. Do NOT guess. OMIT any "
+    "claim whose value is unknown — never output null/None/empty values.\n"
+    "- Use a concise canonical predicate (e.g. 'range', 'horsepower', 'price', "
+    "'towing_capacity', 'seating', 'acceleration'), not a sentence.\n"
+    "- claim_type one of: spec, performance, compliance, capability, comparison, "
+    "award, safety, pricing. confidence is 0-1. Use only the provided entity types. "
+    "No prose."
 )
 
 
@@ -124,11 +131,15 @@ class OpenAILLMProvider:
         entities = parse_entities_json(raw)
         return entities, self._usage(data)
 
-    async def extract_knowledge(self, text: str, pack: VerticalPack):
+    async def extract_knowledge(self, text: str, pack: VerticalPack, subject_hint: str = ""):
         if not settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY not set")
+        subject_line = (
+            f"The primary subject of this page is: \"{subject_hint}\". Attribute facts to "
+            f"the specific entity it names, not the brand.\n" if subject_hint else ""
+        )
         prompt = (
-            f"{pack.extraction_hint}\n"
+            f"{pack.extraction_hint}\n{subject_line}"
             f"Allowed entity_type values: {', '.join(pack.entity_types)}.\n\n"
             f"Page text:\n{text}"
         )

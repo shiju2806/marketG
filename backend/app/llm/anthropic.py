@@ -48,9 +48,13 @@ _KNOWLEDGE_SYSTEM = (
     "You extract structured business knowledge. Return ONLY a JSON object with arrays "
     '"entities" [{name,entity_type,confidence}], "relationships" '
     "[{subject,predicate,object,confidence}], and \"claims\" "
-    "[{subject,predicate,object,value,claim_type,confidence}]. subject/object in "
-    "relationships are entity names. claim_type one of: spec, performance, compliance, "
-    "capability, comparison, award, safety, pricing. confidence 0-1. No prose."
+    "[{subject,predicate,object,value,claim_type,confidence}]. RULES: SUBJECT must be "
+    "the SPECIFIC product/model being described (e.g. a vehicle model), NEVER the "
+    "parent brand; resolve pronouns to that entity. Extract ONLY explicitly stated "
+    "facts — OMIT any claim with an unknown value (never null/empty). Use concise "
+    "canonical predicates ('range','horsepower','price','towing_capacity'). claim_type "
+    "one of: spec, performance, compliance, capability, comparison, award, safety, "
+    "pricing. confidence 0-1. No prose."
 )
 
 
@@ -90,11 +94,15 @@ class AnthropicLLMProvider:
         raw = "".join(block.get("text", "") for block in data.get("content", []))
         return parse_entities_json(raw), self._usage(data)
 
-    async def extract_knowledge(self, text: str, pack: VerticalPack):
+    async def extract_knowledge(self, text: str, pack: VerticalPack, subject_hint: str = ""):
         if not settings.anthropic_api_key:
             raise RuntimeError("ANTHROPIC_API_KEY not set")
+        subject_line = (
+            f"The primary subject of this page is: \"{subject_hint}\". Attribute facts to "
+            f"the specific entity it names, not the brand.\n" if subject_hint else ""
+        )
         prompt = (
-            f"{pack.extraction_hint}\n"
+            f"{pack.extraction_hint}\n{subject_line}"
             f"Allowed entity_type values: {', '.join(pack.entity_types)}.\n\n"
             f"Page text:\n{text}"
         )
