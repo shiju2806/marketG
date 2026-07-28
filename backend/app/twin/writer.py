@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncpg
 
 from app.twin import governance
+from app.twin.predicates import canonicalize_predicate
 
 
 async def upsert_entity(
@@ -49,6 +50,7 @@ async def write_relationship(
     evidence_id, confidence: float
 ) -> None:
     """Insert a current relationship, or bump confidence if it already exists."""
+    predicate = canonicalize_predicate(predicate)
     await conn.execute(
         """
         insert into relationship (account_id, organization_id, subject_entity_id,
@@ -72,6 +74,7 @@ async def write_claim(
 
     Returns {"action": "inserted"|"kept"|"conflict"}.
     """
+    predicate = canonicalize_predicate(predicate)
     subject_key = str(subject_entity_id) if subject_entity_id else (subject_text or "")
 
     current = await conn.fetch(

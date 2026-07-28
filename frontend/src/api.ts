@@ -162,6 +162,12 @@ export const api = {
   delta: (org: string) => req<Delta>(`/delta?organization_id=${org}`),
   probeLatest: (org: string) => req<ProbeReport>(`/probe/latest?organization_id=${org}`),
   trend: (org: string) => req<VisibilityTrend>(`/visibility-trend?organization_id=${org}`),
+  conflicts: (org: string) =>
+    req<{ conflict_id: string; description: string }[]>(`/conflicts?organization_id=${org}`),
+  reason: (org: string, question: string) =>
+    req<{ question: string; answer: string | null; supported: boolean; facts_used: string[] }>(
+      `/reason?organization_id=${org}`, { method: "POST", body: JSON.stringify({ question }) }
+    ),
   runProbe: (org: string) =>
     req<{ citation: number }>(`/probe?organization_id=${org}`, { method: "POST" }),
   competitiveSummary: (org: string) =>

@@ -9,10 +9,79 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from pydantic import BaseModel
+
 from app.api.deps import require_account
 from app.db import get_pool
+from app.twin.reason import reason
 
 router = APIRouter(prefix="/api/v1", tags=["twin"])
+
+
+class ReasonRequest(BaseModel):
+    question: str
+
+
+@router.get("/conflicts")
+async def conflicts(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
+    """Contradictions in the twin — claims AI could repeat either way (SBTS §15)."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        select cf.conflict_id, cf.description, cf.resolution_status,
+               a.predicate, a.value as a_value, a.object as a_object,
+               b.value as b_value, b.object as b_object
+          from conflict cf
+          join claim a on a.claim_id = cf.object_a_id
+          join claim b on b.claim_id = cf.object_b_id
+         where cf.organization_id=$1 and cf.account_id=$2 and cf.resolution_status='pending_review'
+         order by cf.created_at desc
+        """,
+        organization_id, account_id,
+    )
+    return [dict(r) for r in rows]
+
+
+@router.post("/reason")
+async def reason_endpoint(
+    body: ReasonRequest, organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)
+):
+    """Ask a multi-hop question over the twin (the queryable knowledge asset)."""
+    pool = await get_pool()
+    org = await pool.fetchrow(
+        "select organization_id from organization where organization_id=$1 and account_id=$2",
+        organization_id, account_id,
+    )
+    if org is None:
+        raise HTTPException(status_code=404, detail="organization not found")
+    return await reason(pool, organization_id, body.question)
+
+
+@router.get("/twin-diff")
+async def twin_diff(organization_id: UUID = Query(...), account_id: UUID = Depends(require_account)):
+    """What changed in the twin recently — added claims and superseded (updated) ones."""
+    pool = await get_pool()
+    added = await pool.fetch(
+        """
+        select coalesce(e.canonical_name, c.subject_text) subj, c.predicate,
+               coalesce(c.value, c.object) as val, c.created_at
+          from claim c left join entity e on e.entity_id=c.subject_entity_id
+         where c.organization_id=$1 and c.valid_to is null and c.status='active'
+         order by c.created_at desc limit 10
+        """,
+        organization_id,
+    )
+    superseded = await pool.fetch(
+        """
+        select coalesce(e.canonical_name, c.subject_text) subj, c.predicate,
+               coalesce(c.value, c.object) as val
+          from claim c left join entity e on e.entity_id=c.subject_entity_id
+         where c.organization_id=$1 and c.status='superseded'
+         order by c.valid_to desc nulls last limit 10
+        """,
+        organization_id,
+    )
+    return {"added": [dict(r) for r in added], "superseded": [dict(r) for r in superseded]}
 
 
 @router.get("/semantic-twin")

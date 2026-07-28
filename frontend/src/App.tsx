@@ -16,6 +16,7 @@ import { CitedSources } from "./components/CitedSources";
 import { GapMatrix } from "./components/GapMatrix";
 import { ShareOfVoice } from "./components/ShareOfVoice";
 import { TrendChart } from "./components/TrendChart";
+import { AskTwin } from "./components/AskTwin";
 import { QuestionList } from "./components/QuestionList";
 import { RecommendationList } from "./components/RecommendationList";
 import { Section } from "./components/Section";
@@ -266,6 +267,14 @@ export default function App() {
                 <Section title="Competitive standings" subtitle="Which brands AI names when buyers research this market">
                   <ShareOfVoice data={sov} />
                 </Section>
+
+                {/* Ask the twin — queryable knowledge asset (multi-hop reasoning) */}
+                {delta?.twin_readable && (
+                  <Section title="Ask your twin" subtitle="Query your own knowledge graph — grounded answers, no hallucination"
+                    defaultOpen={false}>
+                    <AskTwin orgId={orgId} />
+                  </Section>
+                )}
 
                 {/* Who AI trusts */}
                 {cited && cited.total_citations > 0 && (
