@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useOrg, useTheme } from "./state";
 import { AnalyzeModal } from "./AnalyzeModal";
 
@@ -17,6 +17,7 @@ export function AppLayout() {
   const { orgs, orgId, setOrgId, org } = useOrg();
   const [theme, toggleTheme] = useTheme();
   const [analyzing, setAnalyzing] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="flex min-h-screen">
@@ -63,7 +64,7 @@ export function AppLayout() {
           )}
         </header>
 
-        <div className="px-6 py-6">
+        <div key={location.pathname} className="fade-in px-6 py-6">
           {orgId ? <Outlet /> : (
             <div className="mt-16 text-center">
               <p className="text-sm text-ink-faint">No company analyzed yet.</p>

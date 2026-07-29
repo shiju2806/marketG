@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="mb-5">
+    <div className="mb-5 fade-in">
       <h2 className="text-xl font-bold tracking-tight">{title}</h2>
       {subtitle && <p className="mt-0.5 text-sm text-ink-faint">{subtitle}</p>}
     </div>
@@ -19,7 +19,12 @@ export function Card({ title, children, className = "" }: { title?: string; chil
 }
 
 export function Loading() {
-  return <p className="text-sm text-ink-faint">Loading…</p>;
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="skeleton h-24 w-full" />
+      <div className="skeleton h-40 w-full" />
+    </div>
+  );
 }
 
 export function ErrorMsg({ error }: { error: string | null }) {
