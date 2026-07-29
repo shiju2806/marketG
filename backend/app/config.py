@@ -53,5 +53,9 @@ class Settings(BaseSettings):
     extract_concurrency: int = 8          # parallel knowledge-extraction LLM calls
     probe_concurrency: int = 6            # parallel external-probe + brand-extract calls
 
+    # Budget guardrail (D-05): block new analyses once an account exceeds this
+    # cumulative LLM spend. 0 = no cap.
+    account_budget_usd: float = 0.0
+
 
 settings = Settings()

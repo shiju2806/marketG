@@ -133,6 +133,7 @@ async def run_probe(pool, account_id, organization_id, *, requested_targets=None
         "earned_owned": earned_owned,
         "results": len(mention_flags),
         "visibility_overall": updated,
+        "cost_usd": round(total_cost, 6),
     }
 
 

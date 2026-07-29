@@ -37,13 +37,25 @@ async def crawl_and_store(pool, source) -> list:
         source["source_id"], diagnosis["status"], diagnosis,
     )
 
-    doc_ids = []
+    doc_ids, skipped = [], 0
     for page in pages:
         if not page.html:
             continue
         # Don't build a twin from blocked/error pages — that's how we ended up with a
         # fake "twin" from a 403 error page. Only readable pages feed extraction.
         readable = bool(page.http_status and 200 <= page.http_status < 300 and len(page.text) >= 250)
+
+        # Incremental (D-05): if this page's content_hash is unchanged since the last
+        # crawl AND it already produced chunks, skip re-extraction (the costly step).
+        prior = await pool.fetchrow(
+            "select document_id, content_hash from document where source_id=$1 and url=$2",
+            source["source_id"], page.url,
+        )
+        unchanged = (
+            prior is not None and prior["content_hash"] == page.content_hash
+            and await pool.fetchval("select count(*) from chunk where document_id=$1", prior["document_id"]) > 0
+        )
+
         key = raw_key(str(source["account_id"]), str(source["source_id"]), page.content_hash)
         await upload_raw(key, page.html)
         doc_id = await pool.fetchval(
@@ -62,11 +74,13 @@ async def crawl_and_store(pool, source) -> list:
             classify_page(page.url, page.text), key, page.content_hash, page.http_status,
             page.js_required, page.has_schema_org, ai_policy,
         )
-        if readable:
+        if readable and not unchanged:
             doc_ids.append(doc_id)
+        elif unchanged:
+            skipped += 1
 
     await pool.execute("update source set status='done' where source_id=$1", source["source_id"])
-    return doc_ids
+    return {"doc_ids": doc_ids, "skipped": skipped}
 
 
 async def run_full_analysis(pool, job_id, account_id, source) -> dict:
@@ -76,27 +90,33 @@ async def run_full_analysis(pool, job_id, account_id, source) -> dict:
     await ensure_bucket()
 
     await stage("crawling")
-    doc_ids = await crawl_and_store(pool, source)
+    crawl_result = await crawl_and_store(pool, source)
+    doc_ids, skipped = crawl_result["doc_ids"], crawl_result["skipped"]
 
-    await stage("building twin")
+    await stage("building twin" if not skipped else f"building twin ({skipped} unchanged, skipped)")
+    total_cost, total_tokens = 0.0, 0
     for doc_id in doc_ids:
         doc = await pool.fetchrow("select * from document where document_id=$1", doc_id)
         if doc:
-            await process_document(pool, doc)
+            r = await process_document(pool, doc)
+            total_cost += r.get("cost_usd", 0.0) or 0.0
+            total_tokens += r.get("tokens", 0) or 0
 
     await stage("scoring")
     await run_visibility(pool, account_id, source["organization_id"])
 
     await stage("probing AI")
     probe = await run_probe(pool, account_id, source["organization_id"])
+    total_cost += (probe.get("cost_usd") or 0.0)
 
     await stage("recommendations")
     recs = await generate_recommendations(pool, account_id, source["organization_id"])
 
+    # Persist per-run spend so the usage endpoint / caps have real data (D-05).
+    metrics = {"cost_usd": round(total_cost, 6), "tokens": total_tokens,
+               "pages": len(doc_ids), "pages_skipped": skipped}
+    await pool.execute("update job set metrics=$2::jsonb where job_id=$1", job_id, metrics)
+
     await stage("done")
-    return {
-        "pages": len(doc_ids),
-        "citation": probe.get("citation"),
-        "recommendations": len(recs),
-        "organization_id": str(source["organization_id"]),
-    }
+    return {**metrics, "citation": probe.get("citation"), "recommendations": len(recs),
+            "organization_id": str(source["organization_id"])}

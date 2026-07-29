@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.api.deps import require_account
+from app.config import settings
 from app.db import get_pool
 from app.pipeline.full import run_full_analysis
 
@@ -50,6 +51,19 @@ async def _run_in_background(account_id, source: dict, job_id) -> None:
 @router.post("/analyze", status_code=202)
 async def analyze(body: AnalyzeRequest, account_id: UUID = Depends(require_account)):
     pool = await get_pool()
+
+    # Budget guardrail (D-05): refuse new work once the account exceeds its cap.
+    if settings.account_budget_usd > 0:
+        from app.api.usage import account_spend
+
+        spent = await account_spend(pool, account_id)
+        if spent >= settings.account_budget_usd:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Account budget of ${settings.account_budget_usd} reached (spent ${spent}). "
+                       "Raise ACCOUNT_BUDGET_USD to continue.",
+            )
+
     website = _normalize(body.website)
 
     org = await pool.fetchrow(
@@ -66,11 +80,18 @@ async def analyze(body: AnalyzeRequest, account_id: UUID = Depends(require_accou
         )
     organization_id = org["organization_id"]
 
+    # Reuse the same source per (org, website) so documents + their content_hash
+    # persist across runs — enables incremental "skip unchanged pages" (D-05).
     source = await pool.fetchrow(
-        "insert into source (account_id, organization_id, type, seed_url) "
-        "values ($1,$2,'website',$3) returning *",
-        account_id, organization_id, website,
+        "select * from source where organization_id=$1 and seed_url=$2 limit 1",
+        organization_id, website,
     )
+    if source is None:
+        source = await pool.fetchrow(
+            "insert into source (account_id, organization_id, type, seed_url) "
+            "values ($1,$2,'website',$3) returning *",
+            account_id, organization_id, website,
+        )
 
     # Create the job as 'running' so a (now-optional) worker never also claims it.
     job_id = await pool.fetchval(

@@ -160,7 +160,10 @@ async def crawl_site(
                         js_required=js_required,
                         has_schema_org=detect_schema_org(html),
                         text=rendered_text,
-                        content_hash=hashlib.sha256(html.encode("utf-8")).hexdigest(),
+                        # Hash the normalized visible TEXT, not raw HTML — stable across
+                        # crawls of JS/SPA pages (raw HTML changes every load: nonces,
+                        # timestamps, dynamic markup), enabling incremental skip (D-05).
+                        content_hash=hashlib.sha256(rendered_text.encode("utf-8")).hexdigest(),
                         links=_extract_links(url, html),
                     )
                 )
