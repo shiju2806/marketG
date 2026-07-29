@@ -55,6 +55,10 @@ body {
 .fade-in-2 { animation: fadeUp 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) 0.06s both; }
 .fade-in-3 { animation: fadeUp 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) 0.12s both; }
 
+/* Bars that grow on mount (leaderboards, source lists). */
+@keyframes growX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.bar-grow { transform-origin: left center; animation: growX 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
 /* Skeleton shimmer for loading states. */
 @keyframes shimmer { 100% { background-position: -200% 0; } }
 .skeleton {
@@ -65,5 +69,5 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fade-in, .fade-in-2, .fade-in-3, .skeleton { animation: none; }
+  .fade-in, .fade-in-2, .fade-in-3, .skeleton, .bar-grow { animation: none; transform: none; }
 }
