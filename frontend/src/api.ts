@@ -66,6 +66,7 @@ export interface CitedSource {
   count: number;
   share: number;
   is_first_party: boolean;
+  category: "own" | "competitor" | "social" | "editorial";
 }
 
 export interface CitedSources {
@@ -73,6 +74,33 @@ export interface CitedSources {
   your_domain_cited: boolean;
   total_citations: number;
   sources: CitedSource[];
+  by_category: Partial<Record<"own" | "competitor" | "social" | "editorial", number>>;
+}
+
+export interface Overview {
+  organization: { name: string; website: string | null };
+  score: VisibilityScore | null;
+  share_of_voice: ShareOfVoice[];
+  your_share: number | null;
+  rank: number | null;
+  brand_count: number;
+  earned_owned: number | null;
+  trend: TrendPoint[];
+  diagnosis: { status: string; headline: string } | null;
+  counts: {
+    gaps: number; hidden: number; missing: number; winning: number;
+    recommendations: number; conflicts: number;
+  };
+}
+
+export interface UsageReport {
+  total_cost_usd: number;
+  total_tokens: number;
+  budget_usd: number | null;
+  runs: {
+    organization: string | null;
+    cost_usd: number; tokens: number; pages: number; pages_skipped: number; at: string;
+  }[];
 }
 
 export interface DeltaCategory {
@@ -179,4 +207,6 @@ export const api = {
     ),
   generateRecommendations: (org: string) =>
     req<{ count: number }>(`/recommendations/generate?organization_id=${org}`, { method: "POST" }),
+  overview: (org: string) => req<Overview>(`/overview?organization_id=${org}`),
+  usage: (org?: string) => req<UsageReport>(`/usage${org ? `?organization_id=${org}` : ""}`),
 };
