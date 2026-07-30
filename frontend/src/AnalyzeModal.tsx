@@ -48,6 +48,7 @@ export function AnalyzeModal({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold">Analyze a website</h2>
         <p className="mt-1 text-sm text-ink-faint">See how AI describes a company when buyers research its market.</p>
+        <p className="mt-1 text-xs italic text-accent">✨ The website fills in automatically as you type the company.</p>
         <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <label htmlFor="analyze-company" className="text-xs text-ink-faint">Company</label>
