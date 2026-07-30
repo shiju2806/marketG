@@ -50,16 +50,17 @@ export function AnalyzeModal({ onClose }: { onClose: () => void }) {
         <p className="mt-1 text-sm text-ink-faint">See how AI describes a company when buyers research its market.</p>
         <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-ink-faint">Company</label>
-            <input value={form.name} onChange={(e) => onNameChange(e.target.value)}
+            <label htmlFor="analyze-company" className="text-xs text-ink-faint">Company</label>
+            <input id="analyze-company" name="company" value={form.name}
+              onChange={(e) => onNameChange(e.target.value)}
               placeholder="Rivian" disabled={stage !== null} autoFocus
               className="rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-ink-faint">Website
+            <label htmlFor="analyze-website" className="text-xs text-ink-faint">Website
               {!websiteEdited && form.website && <span className="ml-1 text-ink-faint/70">· suggested, edit if needed</span>}
             </label>
-            <input value={form.website}
+            <input id="analyze-website" name="website" value={form.website}
               onChange={(e) => { setWebsiteEdited(true); setForm({ ...form, website: e.target.value }); }}
               placeholder="rivian.com" disabled={stage !== null}
               className="rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
