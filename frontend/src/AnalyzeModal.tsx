@@ -2,11 +2,23 @@ import { useState, type FormEvent } from "react";
 import { api } from "./api";
 import { useOrg } from "./state";
 
+// Best-guess domain from a company name: "General Motors" -> "generalmotors.com".
+function guessWebsite(name: string): string {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return slug ? `${slug}.com` : "";
+}
+
 export function AnalyzeModal({ onClose }: { onClose: () => void }) {
   const { refreshOrgs, setOrgId } = useOrg();
   const [form, setForm] = useState({ name: "", website: "" });
+  const [websiteEdited, setWebsiteEdited] = useState(false);
   const [stage, setStage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  function onNameChange(name: string) {
+    // Auto-suggest the website until the user manually edits it.
+    setForm((f) => ({ name, website: websiteEdited ? f.website : guessWebsite(name) }));
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -39,13 +51,16 @@ export function AnalyzeModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-ink-faint">Company</label>
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Rivian" disabled={stage !== null}
+            <input value={form.name} onChange={(e) => onNameChange(e.target.value)}
+              placeholder="Rivian" disabled={stage !== null} autoFocus
               className="rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-ink-faint">Website</label>
-            <input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })}
+            <label className="text-xs text-ink-faint">Website
+              {!websiteEdited && form.website && <span className="ml-1 text-ink-faint/70">· suggested, edit if needed</span>}
+            </label>
+            <input value={form.website}
+              onChange={(e) => { setWebsiteEdited(true); setForm({ ...form, website: e.target.value }); }}
               placeholder="rivian.com" disabled={stage !== null}
               className="rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
           </div>
