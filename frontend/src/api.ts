@@ -207,6 +207,8 @@ export const api = {
     ),
   generateRecommendations: (org: string) =>
     req<{ count: number }>(`/recommendations/generate?organization_id=${org}`, { method: "POST" }),
+  companySuggest: (query: string) =>
+    req<{ name: string; domain: string }[]>(`/company-suggest?query=${encodeURIComponent(query)}`),
   overview: (org: string) => req<Overview>(`/overview?organization_id=${org}`),
   usage: (org?: string) => req<UsageReport>(`/usage${org ? `?organization_id=${org}` : ""}`),
 };

@@ -11,8 +11,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
-    analyze, crawl, organizations, overview, probe, recommendations, remediate, sources, twin,
-    usage, visibility,
+    analyze, company, crawl, organizations, overview, probe, recommendations, remediate, sources,
+    twin, usage, visibility,
 )
 from app.config import settings
 from app.db import close_pool, get_pool
@@ -49,6 +49,7 @@ app.include_router(recommendations.router)
 app.include_router(remediate.router)
 app.include_router(usage.router)
 app.include_router(overview.router)
+app.include_router(company.router)
 app.include_router(analyze.router)
 
 
