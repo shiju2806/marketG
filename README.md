@@ -14,6 +14,7 @@ The first commercial application is **AI Visibility**: measuring whether AI can 
 - [Knowledge Intelligence Pipeline Specification](docs/KIPS.md) — acquisition, document intelligence, semantic chunking, multi-agent extraction, governance, learning loop.
 - [Hybrid Retrieval & Reasoning Engine](docs/HRRE.md) — hybrid retrieval, graph expansion, evidence selection, reasoning modes.
 - [AI Visibility Application Spec (MVP)](docs/AVAS.md) — the first product: user workflow and the four visibility scores.
+- [AI Referral Attribution](docs/AI_REFERRAL_ATTRIBUTION.md) — controlled AI referral links, verified conversions, and affiliate-style commission reconciliation.
 - [API Specification](docs/API_SPEC.md) — Twin, Reasoning, Recommendation, and Ingestion HTTP interfaces.
 - [Database Design](docs/DATABASE_DESIGN.md) — polyglot schemas: PostgreSQL, Neo4j, vector, search, object storage.
 - [MVP Engineering Roadmap](docs/MVP_ROADMAP.md) — sprint-by-sprint implementation plan.
